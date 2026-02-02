@@ -22,11 +22,14 @@ class ScraperPaperService @Inject constructor() : PaperService {
 
         paperElements.mapNotNull { element ->
             val link = element.select("a[href^=/abs/]").firstOrNull() ?: return@mapNotNull null
-            val id = link.attr("href").substringAfter("/abs/")
-            val title = element.select("h3, .font-semibold").firstOrNull()?.text() ?: "No Title"
+            val id = link.attr("href").substringAfter("/abs/", "").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            val title = element.select("h3, .font-semibold").firstOrNull()?.text()?.takeIf { it.isNotBlank() } ?: "No Title"
 
             // Authors usually in a list or specific class
-            val authors = element.select(".text-sm").firstOrNull()?.text()?.split(",")?.map { it.trim() } ?: emptyList()
+            val authors = element.select(".text-sm").firstOrNull()?.text()
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() } ?: emptyList()
 
             val summary = element.select("p, .text-text").firstOrNull()?.text() ?: ""
 
@@ -46,7 +49,7 @@ class ScraperPaperService @Inject constructor() : PaperService {
                 upvoteCount = upvoteCount,
                 commentCount = commentCount
             )
-        }
+        }.distinctBy { it.id }
     }
 
     override suspend fun getPaperDetails(id: String): Paper = withContext(Dispatchers.IO) {
@@ -79,9 +82,12 @@ class ScraperPaperService @Inject constructor() : PaperService {
 
         paperElements.mapNotNull { element ->
             val link = element.select("a[href^=/abs/]").firstOrNull() ?: return@mapNotNull null
-            val id = link.attr("href").substringAfter("/abs/")
-            val title = element.select("h3, .font-semibold").firstOrNull()?.text() ?: "No Title"
-            val authors = element.select(".text-sm").firstOrNull()?.text()?.split(",")?.map { it.trim() } ?: emptyList()
+            val id = link.attr("href").substringAfter("/abs/", "").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            val title = element.select("h3, .font-semibold").firstOrNull()?.text()?.takeIf { it.isNotBlank() } ?: "No Title"
+            val authors = element.select(".text-sm").firstOrNull()?.text()
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() } ?: emptyList()
             val summary = element.select("p, .text-text").firstOrNull()?.text() ?: ""
             val thumbnailUrl = element.select("img").firstOrNull()?.attr("src")
             val upvoteCount = element.select("button:has(svg.lucide-thumbs-up) span").firstOrNull()?.text()?.toIntOrNull() ?: 0
@@ -97,7 +103,7 @@ class ScraperPaperService @Inject constructor() : PaperService {
                 upvoteCount = upvoteCount,
                 commentCount = 0
             )
-        }
+        }.distinctBy { it.id }
     }
 
     override suspend fun getBlog(id: String): String = withContext(Dispatchers.IO) {

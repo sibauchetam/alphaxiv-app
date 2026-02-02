@@ -1,5 +1,8 @@
 package org.alphaxiv.app.data.repository
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.alphaxiv.app.data.model.Paper
 import org.alphaxiv.app.data.remote.PaperService
 import javax.inject.Inject
@@ -26,7 +29,9 @@ class PaperRepository @Inject constructor(
 
     fun isBookmarked(id: String): Boolean = bookmarkedPaperIds.contains(id)
 
-    suspend fun getBookmarks(): List<Paper> {
-        return bookmarkedPaperIds.map { id -> paperService.getPaperDetails(id) }
+    suspend fun getBookmarks(): List<Paper> = coroutineScope {
+        bookmarkedPaperIds.map { id ->
+            async { paperService.getPaperDetails(id) }
+        }.awaitAll()
     }
 }

@@ -18,16 +18,29 @@ class BlogViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<BlogUiState>(BlogUiState.Loading)
     val uiState: StateFlow<BlogUiState> = _uiState.asStateFlow()
 
+    private val _selectedLanguage = MutableStateFlow(repository.getOverviewLanguage())
+    val selectedLanguage: StateFlow<String> = _selectedLanguage.asStateFlow()
+
+    private var currentId: String? = null
+
     fun loadBlog(id: String) {
+        currentId = id
         viewModelScope.launch {
             _uiState.value = BlogUiState.Loading
             try {
-                val content = repository.getBlog(id)
+                val content = repository.getBlog(id, _selectedLanguage.value)
                 _uiState.value = BlogUiState.Success(content)
             } catch (e: Exception) {
                 _uiState.value = BlogUiState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    fun changeLanguage(lang: String) {
+        if (_selectedLanguage.value == lang) return
+        _selectedLanguage.value = lang
+        repository.setOverviewLanguage(lang)
+        currentId?.let { loadBlog(it) }
     }
 }
 

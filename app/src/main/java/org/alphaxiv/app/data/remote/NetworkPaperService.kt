@@ -43,11 +43,11 @@ class NetworkPaperService @Inject constructor(
         }
     }
 
-    override suspend fun getBlog(id: String): String {
+    override suspend fun getBlog(id: String, lang: String): String {
         return try {
             val preview = api.getPaperPreview(id)
             val versionId = preview.versionId ?: preview.id
-            val overview = api.getPaperOverview(versionId)
+            val overview = api.getPaperOverview(versionId, lang)
             val content = overview.overview ?: "No blog content available."
             "# ${overview.title ?: preview.title}\n\n$content"
         } catch (e: Exception) {

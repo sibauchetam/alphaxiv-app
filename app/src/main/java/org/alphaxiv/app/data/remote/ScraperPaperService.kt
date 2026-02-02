@@ -56,14 +56,28 @@ class ScraperPaperService @Inject constructor() : PaperService {
         val url = "$baseUrl/abs/$id"
         val doc = Jsoup.connect(url).get()
 
-        val title = doc.select("h1").firstOrNull()?.text() ?: ""
-        val summary = doc.select(".paperBody").firstOrNull()?.text() ?: ""
+        val title = doc.select("h1").firstOrNull()?.text()?.takeIf { it.isNotBlank() }
+            ?: doc.select("meta[property=og:title]").firstOrNull()?.attr("content")
+            ?: ""
+
+        var summary = doc.select(".paperBody").firstOrNull()?.text()
+        if (summary.isNullOrBlank() || summary.contains("loader")) {
+            summary = doc.select("meta[property=og:description]").firstOrNull()?.attr("content")
+                ?.substringAfter("Abstract: ")
+                ?.substringAfter("View recent discussion. ")
+        }
+
+        val authors = doc.select("meta[name=twitter:image]").firstOrNull()?.attr("content")
+            ?.substringAfter("authors=", "")
+            ?.split("%2C", ",")
+            ?.map { java.net.URLDecoder.decode(it.trim(), "UTF-8") }
+            ?.filter { it.isNotBlank() } ?: emptyList()
 
         Paper(
             id = id,
             title = title,
-            authors = emptyList(),
-            summary = summary,
+            authors = authors,
+            summary = summary ?: "",
             publishedDate = "",
             thumbnailUrl = "https://paper-assets.alphaxiv.org/image/${id}v1.png",
             categories = emptyList(),
@@ -112,34 +126,30 @@ class ScraperPaperService @Inject constructor() : PaperService {
             val doc = Jsoup.connect(url).get()
 
             // Try to find the blog content.
-            // Based on some alphaXiv pages, the blog might be in a div with a specific class or just the main content area.
-            // Since we want Markdown, and the site might be rendering it from Markdown,
-            // sometimes it's available in a script tag or we can just get the text and format it.
-
-            val contentElement = doc.select("article, .blog-content, .markdown-body, main").firstOrNull()
-            if (contentElement != null) {
-                // If we find an element, we can try to get its text or HTML.
-                // For a better experience, we might want to convert some HTML to Markdown,
-                // but for now let's just get the text or a placeholder if it's too empty.
-                val text = contentElement.text()
-                if (text.length > 100) {
-                    return@withContext "# ${doc.title()}\n\n$text"
-                }
+            // Some newer pages use specific article tags or markdown classes
+            val contentElement = doc.select("article, .blog-content, .markdown-body, main section").firstOrNull {
+                it.text().length > 200
             }
 
-            // Fallback if scraping fails to find meaningful content
+            if (contentElement != null) {
+                val text = contentElement.text()
+                return@withContext "# ${doc.title()}\n\n$text"
+            }
+
+            // Better Fallback: try to get details from /abs/ page
+            val details = getPaperDetails(id)
+            val authorsStr = if (details.authors.isNotEmpty()) "\n\n**Authors:** ${details.authors.joinToString(", ")}" else ""
+
             """
-            # Blog for Paper $id
+            # ${details.title.ifBlank { "Paper $id" }}
+            $authorsStr
 
-            The blog content for this paper is currently being processed.
+            ## Abstract
+            ${details.summary.ifBlank { "No summary available." }}
 
-            AlphaXiv provides detailed overviews and discussions for research papers.
-            You can view the full content online at:
+            ---
+            *The full blog content for this paper is currently being rendered on alphaXiv. You can view it online at:*
             [$url]($url)
-
-            ## Summary
-            This paper explores innovative techniques in its respective field,
-            providing significant insights and potential for future research.
             """.trimIndent()
         } catch (e: Exception) {
             "Error loading blog: ${e.message}"

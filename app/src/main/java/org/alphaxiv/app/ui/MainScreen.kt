@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,6 +28,7 @@ sealed class Screen(val route: String, val label: String, val icon: androidx.com
     data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -34,6 +36,29 @@ fun MainScreen() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
+        topBar = {
+            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
+                val title = when (currentRoute) {
+                    Screen.Feed.route -> "Explore"
+                    Screen.Search.route -> "Search"
+                    Screen.Bookmarks.route -> "Bookmarks"
+                    else -> "alphaXiv"
+                }
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        },
         bottomBar = {
             if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
                 NavigationBar {

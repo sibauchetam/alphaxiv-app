@@ -24,13 +24,19 @@ fun SearchScreen(
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         SearchBar(
-            query = query,
-            onQueryChange = { query = it },
-            onSearch = { viewModel.search(query) },
-            active = false,
-            onActiveChange = { },
-            placeholder = { Text("Search papers...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            inputField = {
+                SearchBarDefaults.InputField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onSearch = { viewModel.search(query) },
+                    expanded = false,
+                    onExpandedChange = { },
+                    placeholder = { Text("Search papers...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                )
+            },
+            expanded = false,
+            onExpandedChange = { },
             modifier = Modifier.fillMaxWidth()
         ) { }
 
@@ -50,7 +56,7 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(state.results) { paper ->
+                    items(state.results, key = { it.id }) { paper ->
                         PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
                     }
                 }

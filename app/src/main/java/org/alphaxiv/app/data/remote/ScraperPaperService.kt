@@ -13,9 +13,6 @@ class ScraperPaperService @Inject constructor() : PaperService {
         val url = if (sort.isNotEmpty()) "$baseUrl/?sort=$sort" else baseUrl
         val doc = Jsoup.connect(url).get()
 
-        // This is a simplified selector, need to refine based on actual HTML
-        // From curl, papers seem to be in a list.
-        // Let's look for elements that have a link to /abs/
         val paperElements = doc.select("div:has(a[href^=/abs/])").toList().filter { element ->
             element.select("h1, h2, h3, .text-lg, .font-semibold").isNotEmpty()
         }
@@ -25,36 +22,53 @@ class ScraperPaperService @Inject constructor() : PaperService {
             val id = link.attr("href").substringAfter("/abs/")
             val title = element.select("h3, .font-semibold").firstOrNull()?.text() ?: "No Title"
 
-            // Authors usually in a list or specific class
-            val authors = element.select(".text-sm").firstOrNull()?.text()?.split(",")?.map { it.trim() } ?: emptyList()
+            val authors = element.select(".text-sm, .text-subtext-1").firstOrNull()?.text()?.split(",")?.map { it.trim() } ?: emptyList()
 
-            val summary = element.select("p, .text-text").firstOrNull()?.text() ?: ""
+            val summary = element.select("p, .text-text, .text-subtext-0").firstOrNull()?.text() ?: ""
 
-            val thumbnailUrl = element.select("img").firstOrNull()?.attr("src")
+            var thumbnailUrl = element.select("img").firstOrNull()?.attr("src")
+            if (thumbnailUrl != null && !thumbnailUrl.startsWith("http")) {
+                thumbnailUrl = if (thumbnailUrl.startsWith("/")) "$baseUrl$thumbnailUrl" else "$baseUrl/$thumbnailUrl"
+            }
 
             val upvoteCount = element.select("button:has(svg.lucide-thumbs-up) span").firstOrNull()?.text()?.toIntOrNull() ?: 0
-            val commentCount = 0 // Harder to get without deep parsing
+            val commentCount = element.select("a[href*='tab=comments'] span, button:has(svg.lucide-message-square) span").firstOrNull()?.text()?.toIntOrNull() ?: 0
 
             Paper(
                 id = id,
                 title = title,
                 authors = authors,
                 summary = summary,
-                publishedDate = "", // Need to parse from text
+                publishedDate = "",
                 thumbnailUrl = thumbnailUrl,
-                categories = emptyList(), // Need to parse tags
+                categories = emptyList(),
                 upvoteCount = upvoteCount,
                 commentCount = commentCount
             )
-        }
+        }.distinctBy { it.id }
     }
 
     override suspend fun getPaperDetails(id: String): Paper = withContext(Dispatchers.IO) {
         val url = "$baseUrl/abs/$id"
         val doc = Jsoup.connect(url).get()
 
-        val title = doc.select("h1").firstOrNull()?.text() ?: ""
-        val summary = doc.select(".paperBody").firstOrNull()?.text() ?: ""
+        var title = doc.select("h1").firstOrNull()?.text() ?: ""
+        if (title.isEmpty()) {
+            title = doc.select("meta[property=og:title]").attr("content")
+                .ifEmpty { doc.select("meta[name=twitter:title]").attr("content") }
+                .ifEmpty { doc.title() }
+        }
+
+        var summary = doc.select(".paperBody, .abstract, #abstract").firstOrNull()?.text() ?: ""
+        if (summary.isEmpty()) {
+            summary = doc.select("meta[property=og:description]").attr("content")
+                .ifEmpty { doc.select("meta[name=description]").attr("content") }
+        }
+
+        var thumbnailUrl = doc.select("meta[property=og:image]").attr("content")
+        if (thumbnailUrl.isEmpty()) {
+            thumbnailUrl = "https://paper-assets.alphaxiv.org/image/${id}v1.png"
+        }
 
         Paper(
             id = id,
@@ -62,7 +76,7 @@ class ScraperPaperService @Inject constructor() : PaperService {
             authors = emptyList(),
             summary = summary,
             publishedDate = "",
-            thumbnailUrl = "https://paper-assets.alphaxiv.org/image/${id}v1.png",
+            thumbnailUrl = thumbnailUrl,
             categories = emptyList(),
             upvoteCount = 0,
             commentCount = 0
@@ -70,7 +84,10 @@ class ScraperPaperService @Inject constructor() : PaperService {
     }
 
     override suspend fun searchPapers(query: String): List<Paper> = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/?search=${java.net.URLEncoder.encode(query, "UTF-8")}"
+        val trimmedQuery = query.trim()
+        if (trimmedQuery.isEmpty()) return@withContext emptyList()
+
+        val url = "$baseUrl/?search=${java.net.URLEncoder.encode(trimmedQuery, "UTF-8")}"
         val doc = Jsoup.connect(url).get()
 
         val paperElements = doc.select("div:has(a[href^=/abs/])").toList().filter { element ->
@@ -97,7 +114,7 @@ class ScraperPaperService @Inject constructor() : PaperService {
                 upvoteCount = upvoteCount,
                 commentCount = 0
             )
-        }
+        }.distinctBy { it.id }
     }
 
     override suspend fun getBlog(id: String): String = withContext(Dispatchers.IO) {
@@ -105,23 +122,20 @@ class ScraperPaperService @Inject constructor() : PaperService {
             val url = "$baseUrl/overview/$id"
             val doc = Jsoup.connect(url).get()
 
-            // Try to find the blog content.
-            // Based on some alphaXiv pages, the blog might be in a div with a specific class or just the main content area.
-            // Since we want Markdown, and the site might be rendering it from Markdown,
-            // sometimes it's available in a script tag or we can just get the text and format it.
-
             val contentElement = doc.select("article, .blog-content, .markdown-body, main").firstOrNull()
-            if (contentElement != null) {
-                // If we find an element, we can try to get its text or HTML.
-                // For a better experience, we might want to convert some HTML to Markdown,
-                // but for now let's just get the text or a placeholder if it's too empty.
-                val text = contentElement.text()
-                if (text.length > 100) {
-                    return@withContext "# ${doc.title()}\n\n$text"
-                }
+            val text = contentElement?.text() ?: ""
+
+            if (text.length > 100) {
+                return@withContext "# ${doc.title()}\n\n$text"
             }
 
-            // Fallback if scraping fails to find meaningful content
+            val metaDescription = doc.select("meta[property=og:description]").attr("content")
+                .ifEmpty { doc.select("meta[name=description]").attr("content") }
+
+            if (metaDescription.isNotEmpty()) {
+                return@withContext "# ${doc.title()}\n\n$metaDescription"
+            }
+
             """
             # Blog for Paper $id
 

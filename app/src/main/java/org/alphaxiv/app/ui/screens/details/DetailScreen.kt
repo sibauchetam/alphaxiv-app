@@ -13,7 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -52,7 +55,18 @@ fun DetailScreen(
                             )
                         }
                     }
-                    IconButton(onClick = { /* Share */ }) {
+                    val context = LocalContext.current
+                    IconButton(onClick = {
+                        if (state is DetailUiState.Success) {
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, "Check out this paper on alphaXiv: ${state.paper.title}\nhttps://www.alphaxiv.org/abs/${state.paper.id}")
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            context.startActivity(shareIntent)
+                        }
+                    }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
                 }
@@ -111,8 +125,13 @@ fun DetailScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Spacer(modifier = Modifier.height(24.dp))
+                        val context = LocalContext.current
                         Button(
-                            onClick = { /* Open PDF */ },
+                            onClick = {
+                                val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                context.startActivity(intent)
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.extraLarge
                         ) {

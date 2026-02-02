@@ -45,7 +45,7 @@ fun BookmarksScreen(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(state.papers) { paper ->
+                        items(state.papers, key = { it.id }) { paper ->
                             PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
                         }
                     }

@@ -1,6 +1,8 @@
 package org.alphaxiv.app.ui.theme
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +29,12 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Pink40
 )
 
+tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 @Composable
 fun AlphaXivTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -44,9 +52,11 @@ fun AlphaXivTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val window = (view.context.findActivity())?.window
+            window?.statusBarColor = colorScheme.primary.toArgb()
+            if (window != null) {
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            }
         }
     }
 

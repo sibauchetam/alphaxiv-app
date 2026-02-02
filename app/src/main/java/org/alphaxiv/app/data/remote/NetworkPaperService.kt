@@ -62,16 +62,17 @@ class NetworkPaperService @Inject constructor(
             if (it.startsWith("http")) it else "$assetBaseUrl$it"
         }
 
-        // The API seems to use 'public_total_votes' for upvotes shown on the site.
-        // Comment count doesn't seem to be directly in the feed/preview DTO.
-        // We use totalVotes as a possible surrogate or fallback to 0.
+        // CRITICAL: We use universalPaperId as the primary domain ID because it's what
+        // the API endpoints (/preview, /overview) and web links expect.
+        // Falling back to id (UUID) if universalPaperId is missing.
+        val domainId = universalPaperId ?: id
 
         return Paper(
-            id = id,
+            id = domainId,
             title = title,
             authors = authors ?: emptyList(),
             summary = summaryText,
-            publishedDate = publicationDate ?: firstPublicationDate ?: "",
+            publishedDate = publicationDate?.toString() ?: firstPublicationDate?.toString() ?: "",
             thumbnailUrl = fullThumbnailUrl,
             categories = emptyList(),
             upvoteCount = metrics?.upvoteCount ?: 0,

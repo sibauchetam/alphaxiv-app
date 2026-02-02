@@ -17,8 +17,9 @@ data class PaperDto(
     val metrics: MetricsDto?,
     @SerializedName("version_id") val versionId: String?,
     @SerializedName("canonical_id") val canonicalId: String?,
-    @SerializedName("publication_date") val publicationDate: String?,
-    @SerializedName("first_publication_date") val firstPublicationDate: String?
+    // Using Any? to handle both String and Long/Number timestamps across different endpoints
+    @SerializedName("publication_date") val publicationDate: Any?,
+    @SerializedName("first_publication_date") val firstPublicationDate: Any?
 )
 
 data class PaperSummaryDto(

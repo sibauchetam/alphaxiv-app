@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -124,8 +125,13 @@ fun DetailScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Spacer(modifier = Modifier.height(24.dp))
+                        val context = LocalContext.current
                         Button(
-                            onClick = { /* Open PDF */ },
+                            onClick = {
+                                val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                context.startActivity(intent)
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.extraLarge
                         ) {

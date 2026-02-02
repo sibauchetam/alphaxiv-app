@@ -16,8 +16,8 @@ class ScraperPaperService @Inject constructor() : PaperService {
         // This is a simplified selector, need to refine based on actual HTML
         // From curl, papers seem to be in a list.
         // Let's look for elements that have a link to /abs/
-        val paperElements = doc.select("div:has(a[href^=/abs/])").filter {
-            it.select("h1, h2, h3, .text-lg, .font-semibold").isNotEmpty()
+        val paperElements = doc.select("div:has(a[href^=/abs/])").toList().filter { element ->
+            element.select("h1, h2, h3, .text-lg, .font-semibold").isNotEmpty()
         }
 
         paperElements.mapNotNull { element ->
@@ -73,8 +73,8 @@ class ScraperPaperService @Inject constructor() : PaperService {
         val url = "$baseUrl/?search=${java.net.URLEncoder.encode(query, "UTF-8")}"
         val doc = Jsoup.connect(url).get()
 
-        val paperElements = doc.select("div:has(a[href^=/abs/])").filter {
-            it.select("h3, .font-semibold").isNotEmpty()
+        val paperElements = doc.select("div:has(a[href^=/abs/])").toList().filter { element ->
+            element.select("h3, .font-semibold").isNotEmpty()
         }
 
         paperElements.mapNotNull { element ->

@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.alphaxiv.app.data.remote.MockPaperService
 import org.alphaxiv.app.data.remote.PaperService
+import org.alphaxiv.app.data.remote.ScraperPaperService
 import javax.inject.Singleton
 
 @Module

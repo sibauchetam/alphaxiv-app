@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -140,7 +140,7 @@ fun PaperCard(
                     Icon(Icons.Default.ThumbUp, contentDescription = null, size = 16.dp)
                     Text(text = " ${paper.upvoteCount}", style = MaterialTheme.typography.labelSmall)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Icon(Icons.Default.Bookmark, contentDescription = null, size = 16.dp)
+                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, size = 16.dp)
                     Text(text = " ${paper.commentCount}", style = MaterialTheme.typography.labelSmall)
                 }
             }

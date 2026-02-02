@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import org.alphaxiv.app.ui.screens.blog.BlogScreen
 import org.alphaxiv.app.ui.screens.bookmarks.BookmarksScreen
 import org.alphaxiv.app.ui.screens.details.DetailScreen
 import org.alphaxiv.app.ui.screens.feed.FeedScreen
@@ -84,6 +85,18 @@ fun MainScreen() {
             ) { backStackEntry ->
                 val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
                 DetailScreen(
+                    id = paperId,
+                    viewModel = hiltViewModel(),
+                    onBack = { navController.popBackStack() },
+                    onViewBlog = { navController.navigate("blog/$paperId") }
+                )
+            }
+            composable(
+                route = "blog/{paperId}",
+                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+                BlogScreen(
                     id = paperId,
                     viewModel = hiltViewModel(),
                     onBack = { navController.popBackStack() }

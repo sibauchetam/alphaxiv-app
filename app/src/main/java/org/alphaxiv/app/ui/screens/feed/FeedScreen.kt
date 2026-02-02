@@ -12,10 +12,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import org.alphaxiv.app.data.model.Paper
 
 @Composable
@@ -47,7 +49,7 @@ fun FeedScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(state.papers) { paper ->
+                    items(state.papers, key = { it.id }) { paper ->
                         PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
                     }
                 }
@@ -98,11 +100,14 @@ fun PaperCard(
         Row(
             modifier = Modifier
                 .padding(12.dp)
-                .height(IntrinsicSize.Min)
+                .fillMaxWidth()
         ) {
             if (paper.thumbnailUrl != null) {
                 AsyncImage(
-                    model = paper.thumbnailUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(paper.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier
                         .size(100.dp, 130.dp)

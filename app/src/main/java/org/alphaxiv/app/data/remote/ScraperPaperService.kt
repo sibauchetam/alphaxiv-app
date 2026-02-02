@@ -46,7 +46,7 @@ class ScraperPaperService @Inject constructor() : PaperService {
                 upvoteCount = upvoteCount,
                 commentCount = commentCount
             )
-        }
+        }.distinctBy { it.id }
     }
 
     override suspend fun getPaperDetails(id: String): Paper = withContext(Dispatchers.IO) {
@@ -97,7 +97,7 @@ class ScraperPaperService @Inject constructor() : PaperService {
                 upvoteCount = upvoteCount,
                 commentCount = 0
             )
-        }
+        }.distinctBy { it.id }
     }
 
     override suspend fun getBlog(id: String): String = withContext(Dispatchers.IO) {
@@ -111,14 +111,18 @@ class ScraperPaperService @Inject constructor() : PaperService {
             // sometimes it's available in a script tag or we can just get the text and format it.
 
             val contentElement = doc.select("article, .blog-content, .markdown-body, main").firstOrNull()
-            if (contentElement != null) {
-                // If we find an element, we can try to get its text or HTML.
-                // For a better experience, we might want to convert some HTML to Markdown,
-                // but for now let's just get the text or a placeholder if it's too empty.
-                val text = contentElement.text()
-                if (text.length > 100) {
-                    return@withContext "# ${doc.title()}\n\n$text"
-                }
+            val text = contentElement?.text() ?: ""
+
+            if (text.length > 100) {
+                return@withContext "# ${doc.title()}\n\n$text"
+            }
+
+            // Fallback to meta tags if main content is missing or too short (likely CSR)
+            val metaDescription = doc.select("meta[property=og:description]").attr("content")
+                .ifEmpty { doc.select("meta[name=description]").attr("content") }
+
+            if (metaDescription.isNotEmpty()) {
+                return@withContext "# ${doc.title()}\n\n$metaDescription"
             }
 
             // Fallback if scraping fails to find meaningful content

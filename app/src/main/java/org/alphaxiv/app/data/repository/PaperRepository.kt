@@ -1,5 +1,11 @@
 package org.alphaxiv.app.data.repository
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Collections
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.alphaxiv.app.data.model.Paper
 import org.alphaxiv.app.data.remote.PaperService
 import javax.inject.Inject
@@ -7,9 +13,16 @@ import javax.inject.Singleton
 
 @Singleton
 class PaperRepository @Inject constructor(
-    private val paperService: PaperService
+    private val paperService: PaperService,
+    @ApplicationContext private val context: Context
 ) {
-    private val bookmarkedPaperIds = mutableSetOf<String>()
+    private val prefs = context.getSharedPreferences("bookmarks_prefs", Context.MODE_PRIVATE)
+    private val bookmarkedPaperIds = Collections.synchronizedSet(mutableSetOf<String>())
+
+    init {
+        val savedIds = prefs.getStringSet("bookmarked_ids", emptySet()) ?: emptySet()
+        bookmarkedPaperIds.addAll(savedIds)
+    }
 
     suspend fun getFeed(sort: String): List<Paper> = paperService.getFeed(sort)
     suspend fun getPaperDetails(id: String): Paper = paperService.getPaperDetails(id)
@@ -17,16 +30,22 @@ class PaperRepository @Inject constructor(
     suspend fun getBlog(id: String): String = paperService.getBlog(id)
 
     fun toggleBookmark(id: String) {
-        if (bookmarkedPaperIds.contains(id)) {
-            bookmarkedPaperIds.remove(id)
-        } else {
-            bookmarkedPaperIds.add(id)
+        synchronized(bookmarkedPaperIds) {
+            if (bookmarkedPaperIds.contains(id)) {
+                bookmarkedPaperIds.remove(id)
+            } else {
+                bookmarkedPaperIds.add(id)
+            }
+            prefs.edit().putStringSet("bookmarked_ids", bookmarkedPaperIds.toSet()).apply()
         }
     }
 
     fun isBookmarked(id: String): Boolean = bookmarkedPaperIds.contains(id)
 
-    suspend fun getBookmarks(): List<Paper> {
-        return bookmarkedPaperIds.map { id -> paperService.getPaperDetails(id) }
+    suspend fun getBookmarks(): List<Paper> = coroutineScope {
+        val ids = synchronized(bookmarkedPaperIds) { bookmarkedPaperIds.toSet() }
+        ids.map { id ->
+            async { paperService.getPaperDetails(id) }
+        }.awaitAll()
     }
 }

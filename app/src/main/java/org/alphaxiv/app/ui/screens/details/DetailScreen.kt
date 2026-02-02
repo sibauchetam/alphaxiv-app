@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Share
@@ -24,7 +24,8 @@ import org.alphaxiv.app.data.model.Paper
 fun DetailScreen(
     id: String,
     viewModel: DetailViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onViewBlog: () -> Unit
 ) {
     LaunchedEffect(id) {
         viewModel.loadPaper(id)
@@ -38,7 +39,7 @@ fun DetailScreen(
                 title = { Text("Paper Details") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -116,6 +117,14 @@ fun DetailScreen(
                             shape = MaterialTheme.shapes.extraLarge
                         ) {
                             Text("View PDF")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onViewBlog,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
+                            Text("View Blog")
                         }
                     }
                 }

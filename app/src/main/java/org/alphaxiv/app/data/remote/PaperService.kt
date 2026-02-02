@@ -6,4 +6,5 @@ interface PaperService {
     suspend fun getFeed(sort: String): List<Paper>
     suspend fun getPaperDetails(id: String): Paper
     suspend fun searchPapers(query: String): List<Paper>
+    suspend fun getBlog(id: String): String
 }

@@ -38,4 +38,31 @@ class MockPaperService @Inject constructor() : PaperService {
     override suspend fun searchPapers(query: String): List<Paper> {
         return getFeed("").filter { it.title.contains(query, ignoreCase = true) }
     }
+
+    override suspend fun getBlog(id: String): String {
+        return """
+            # Reinforcement Learning via Self-Distillation
+
+            ## Introduction
+            The paper introduces **Self-Distillation Policy Optimization (SDPO)**, an on-policy reinforcement learning algorithm that leverages rich, tokenized environment feedback to improve Large Language Model (LLM) performance.
+
+            ### Key Features
+            * **Self-Distillation**: The model learns from its own explained mistakes.
+            * **Sample Efficiency**: Significantly enhanced sample efficiency compared to traditional RL.
+            * **Accuracy**: Higher final accuracy on complex reasoning and coding tasks.
+
+            ## Methodology
+            The authors propose a framework where the model generates multiple responses, critiques them, and then distills the best practices into its policy.
+
+            ```python
+            def sdpo_update(policy, feedback):
+                # Simplified representation
+                loss = compute_distillation_loss(policy, feedback)
+                optimizer.step(loss)
+            ```
+
+            ## Results
+            Experiments on MATH and HumanEval show that SDPO outperforms standard PPO by a large margin.
+        """.trimIndent()
+    }
 }

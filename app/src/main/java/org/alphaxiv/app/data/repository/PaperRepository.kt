@@ -14,6 +14,7 @@ class PaperRepository @Inject constructor(
     suspend fun getFeed(sort: String): List<Paper> = paperService.getFeed(sort)
     suspend fun getPaperDetails(id: String): Paper = paperService.getPaperDetails(id)
     suspend fun searchPapers(query: String): List<Paper> = paperService.searchPapers(query)
+    suspend fun getBlog(id: String): String = paperService.getBlog(id)
 
     fun toggleBookmark(id: String) {
         if (bookmarkedPaperIds.contains(id)) {

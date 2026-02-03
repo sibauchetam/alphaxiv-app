@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -85,36 +84,32 @@ fun DetailScreen(
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                )
             )
         },
-        bottomBar = {
+        floatingActionButton = {
             if (uiState is DetailUiState.Success) {
                 val paper = (uiState as DetailUiState.Success).paper
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    HorizontalFloatingAppBar(expanded = true,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        IconButton(onClick = {
-                            val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
-                            context.startActivity(intent)
-                        }) {
-                            Icon(Icons.Default.Description, contentDescription = "Read Paper")
-                        }
-                        VerticalDivider(modifier = Modifier.height(24.dp))
-                        IconButton(onClick = onViewBlog) {
-                            Icon(Icons.Default.Chat, contentDescription = "Discussion")
-                        }
-                    }
-                }
+                ExtendedFloatingActionButton(
+                    text = { Text("Read Paper") },
+                    icon = { Icon(Icons.Default.Description, contentDescription = null) },
+                    onClick = {
+                        val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                        context.startActivity(intent)
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = MaterialTheme.shapes.large
+                )
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val state = uiState) {
@@ -137,7 +132,7 @@ fun DetailScreen(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(250.dp)
+                                    .height(280.dp)
                                     .clip(MaterialTheme.shapes.extraLarge),
                                 contentScale = ContentScale.Crop
                             )
@@ -147,7 +142,7 @@ fun DetailScreen(
                         Text(
                             text = paper.authors.joinToString(", "),
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -159,27 +154,39 @@ fun DetailScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
                         Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            color = MaterialTheme.colorScheme.surface,
                             shape = MaterialTheme.shapes.large,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            tonalElevation = 1.dp
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = "Abstract",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = paper.summary,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    lineHeight = 24.sp
+                                    lineHeight = 24.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(100.dp)) // Padding for floating app bar
+                        Spacer(modifier = Modifier.height(24.dp))
+                        OutlinedButton(
+                            onClick = onViewBlog,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large,
+                            contentPadding = PaddingValues(16.dp)
+                        ) {
+                            Text("Join Discussion", fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.height(80.dp)) // FAB spacing
                     }
                 }
                 is DetailUiState.Error -> {

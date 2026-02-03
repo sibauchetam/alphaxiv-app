@@ -43,18 +43,19 @@ fun FeedScreen(
                 title = {
                     Text(
                         "Explore",
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             SortSelector(
@@ -129,14 +130,14 @@ fun PaperCard(
     paper: Paper,
     onClick: () -> Unit
 ) {
-    Card(
+    ElevatedCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -153,7 +154,7 @@ fun PaperCard(
                     Text(
                         text = paper.authors.joinToString(", "),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -168,7 +169,7 @@ fun PaperCard(
                             .build(),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(80.dp, 104.dp)
+                            .size(84.dp, 110.dp)
                             .clip(MaterialTheme.shapes.medium)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentScale = ContentScale.Crop
@@ -191,7 +192,12 @@ fun PaperCard(
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             },
-                            shape = MaterialTheme.shapes.small
+                            shape = MaterialTheme.shapes.small,
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                labelColor = MaterialTheme.colorScheme.primary,
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            ),
+                            border = null
                         )
                     }
                 }
@@ -203,7 +209,8 @@ fun PaperCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 20.sp
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -217,7 +224,7 @@ fun PaperCard(
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "${paper.upvoteCount}",
                     style = MaterialTheme.typography.labelMedium,
@@ -230,7 +237,7 @@ fun PaperCard(
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.outline
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "${paper.commentCount}",
                     style = MaterialTheme.typography.labelMedium,

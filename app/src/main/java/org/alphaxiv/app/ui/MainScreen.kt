@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,7 +28,6 @@ sealed class Screen(val route: String, val label: String, val icon: androidx.com
     data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -37,10 +37,13 @@ fun MainScreen() {
     Scaffold(
         bottomBar = {
             if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
-                ShortNavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 0.dp
+                ) {
                     val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
                     items.forEach { screen ->
-                        ShortNavigationBarItem(
+                        NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = screen.label) },
                             label = { Text(screen.label) },
                             selected = currentRoute == screen.route,
@@ -50,7 +53,12 @@ fun MainScreen() {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
                     }
                 }

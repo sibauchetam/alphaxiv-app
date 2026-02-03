@@ -26,7 +26,7 @@ fun SearchScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    Scaffold(
+    Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(

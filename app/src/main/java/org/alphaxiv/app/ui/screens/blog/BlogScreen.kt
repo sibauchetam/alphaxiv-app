@@ -44,10 +44,10 @@ fun BlogScreen(
         "de" to "German"
     )
 
-    Scaffold(
+    Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            TopAppBar(colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 title = { Text("Discussion", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

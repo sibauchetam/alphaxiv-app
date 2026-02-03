@@ -2,7 +2,7 @@ package org.alphaxiv.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// alphaXiv Red palette - Generated based on #B11818
+// alphaXiv Red palette - Refined Material 3
 val primaryLight = Color(0xFFB12D23)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFFFDAD5)
@@ -19,9 +19,9 @@ val errorLight = Color(0xFFBA1A1A)
 val onErrorLight = Color(0xFFFFFFFF)
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF410002)
-val backgroundLight = Color(0xFFFFF8F7)
+val backgroundLight = Color(0xFFFBF8F7)
 val onBackgroundLight = Color(0xFF231918)
-val surfaceLight = Color(0xFFFFF8F7)
+val surfaceLight = Color(0xFFFBF8F7)
 val onSurfaceLight = Color(0xFF231918)
 val surfaceVariantLight = Color(0xFFF5DDDA)
 val onSurfaceVariantLight = Color(0xFF534341)
@@ -34,10 +34,10 @@ val inversePrimaryLight = Color(0xFFFFB4AA)
 val surfaceDimLight = Color(0xFFE8D6D4)
 val surfaceBrightLight = Color(0xFFFFF8F7)
 val surfaceContainerLowestLight = Color(0xFFFFFFFF)
-val surfaceContainerLowLight = Color(0xFFFFF0EF)
-val surfaceContainerLight = Color(0xFFFCEAE8)
-val surfaceContainerHighLight = Color(0xFFF7E4E2)
-val surfaceContainerHighestLight = Color(0xFFF1DEDC)
+val surfaceContainerLowLight = Color(0xFFF7F2F1)
+val surfaceContainerLight = Color(0xFFF1EDEC)
+val surfaceContainerHighLight = Color(0xFFEBE7E6)
+val surfaceContainerHighestLight = Color(0xFFE5E1E0)
 
 val primaryDark = Color(0xFFFFB4AA)
 val onPrimaryDark = Color(0xFF690004)

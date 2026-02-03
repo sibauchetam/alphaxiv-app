@@ -30,10 +30,10 @@ fun BookmarksScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Scaffold(
+    Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(
+            MediumTopAppBar(colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 title = { Text("Bookmarks", fontWeight = FontWeight.Bold) },
                 scrollBehavior = scrollBehavior
             )

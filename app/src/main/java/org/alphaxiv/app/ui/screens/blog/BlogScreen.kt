@@ -5,15 +5,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.jeziellago.compose.markdowntext.MarkdownText
+import org.alphaxiv.app.ui.components.LatexMarkdownText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +25,20 @@ fun BlogScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+    val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+    var showLanguageMenu by remember { mutableStateOf(false) }
+
+    val languages = listOf(
+        "en" to "English",
+        "zh" to "Chinese",
+        "ru" to "Russian",
+        "fr" to "French",
+        "ja" to "Japanese",
+        "es" to "Spanish",
+        "ko" to "Korean",
+        "hi" to "Hindi",
+        "de" to "German"
+    )
 
     Scaffold(
         topBar = {
@@ -35,6 +47,31 @@ fun BlogScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showLanguageMenu = true }) {
+                        Icon(Icons.Default.Language, contentDescription = "Language")
+                    }
+                    DropdownMenu(
+                        expanded = showLanguageMenu,
+                        onDismissRequest = { showLanguageMenu = false }
+                    ) {
+                        languages.forEach { (code, name) ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(selected = selectedLanguage == code, onClick = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(name)
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.changeLanguage(code)
+                                    showLanguageMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -54,11 +91,9 @@ fun BlogScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
-                        MarkdownText(
+                        LatexMarkdownText(
                             markdown = state.content,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

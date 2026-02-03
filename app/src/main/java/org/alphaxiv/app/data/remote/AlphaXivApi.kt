@@ -24,8 +24,9 @@ interface AlphaXivApi {
         @Path("id") id: String
     ): PaperDto
 
-    @GET("papers/v3/{versionId}/overview/en")
+    @GET("papers/v3/{versionId}/overview/{lang}")
     suspend fun getPaperOverview(
-        @Path("versionId") versionId: String
+        @Path("versionId") versionId: String,
+        @Path("lang") lang: String
     ): OverviewResponseDto
 }

@@ -27,7 +27,10 @@ class PaperRepository @Inject constructor(
     suspend fun getFeed(sort: String): List<Paper> = paperService.getFeed(sort)
     suspend fun getPaperDetails(id: String): Paper = paperService.getPaperDetails(id)
     suspend fun searchPapers(query: String): List<Paper> = paperService.searchPapers(query)
-    suspend fun getBlog(id: String): String = paperService.getBlog(id)
+    suspend fun getBlog(id: String, lang: String): String = paperService.getBlog(id, lang)
+
+    fun getOverviewLanguage(): String = prefs.getString("overview_language", "en") ?: "en"
+    fun setOverviewLanguage(lang: String) = prefs.edit().putString("overview_language", lang).apply()
 
     fun toggleBookmark(id: String) {
         synchronized(bookmarkedPaperIds) {

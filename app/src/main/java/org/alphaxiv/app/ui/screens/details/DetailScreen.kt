@@ -49,10 +49,11 @@ fun DetailScreen(
                 title = {
                     Text(
                         text = if (uiState is DetailUiState.Success) (uiState as DetailUiState.Success).paper.title else "Paper Details",
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 36.sp
                     )
                 },
                 navigationIcon = {
@@ -88,7 +89,7 @@ fun DetailScreen(
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -96,7 +97,7 @@ fun DetailScreen(
             if (uiState is DetailUiState.Success) {
                 val paper = (uiState as DetailUiState.Success).paper
                 ExtendedFloatingActionButton(
-                    text = { Text("Read Paper") },
+                    text = { Text("Read Full Paper", fontWeight = FontWeight.Bold) },
                     icon = { Icon(Icons.Default.Description, contentDescription = null) },
                     onClick = {
                         val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
@@ -105,7 +106,8 @@ fun DetailScreen(
                     },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.extraLarge,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
                 )
             }
         },
@@ -115,7 +117,7 @@ fun DetailScreen(
             when (val state = uiState) {
                 is DetailUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingIndicator()
+                        CircularWavyProgressIndicator()
                     }
                 }
                 is DetailUiState.Success -> {
@@ -127,66 +129,84 @@ fun DetailScreen(
                             .padding(16.dp)
                     ) {
                         if (paper.thumbnailUrl != null) {
-                            AsyncImage(
-                                model = paper.thumbnailUrl,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(280.dp)
-                                    .clip(MaterialTheme.shapes.extraLarge),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Card(
+                                shape = MaterialTheme.shapes.extraLarge,
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                AsyncImage(
+                                    model = paper.thumbnailUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(28.dp))
                         }
 
                         Text(
                             text = paper.authors.joinToString(", "),
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.SemiBold
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Published: ${paper.publishedDate}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = "Published: ${paper.publishedDate}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Text(
+                            text = "Abstract",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         Surface(
                             color = MaterialTheme.colorScheme.surface,
-                            shape = MaterialTheme.shapes.large,
+                            shape = MaterialTheme.shapes.extraLarge,
                             modifier = Modifier.fillMaxWidth(),
-                            tonalElevation = 1.dp
+                            tonalElevation = 2.dp,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "Abstract",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = paper.summary,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    lineHeight = 24.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            Text(
+                                text = paper.summary,
+                                style = MaterialTheme.typography.bodyLarge,
+                                lineHeight = 28.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(24.dp)
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedButton(
+                        Button(
                             onClick = onViewBlog,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            contentPadding = PaddingValues(16.dp)
+                            shape = MaterialTheme.shapes.extraLarge,
+                            contentPadding = PaddingValues(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         ) {
-                            Text("Join Discussion", fontWeight = FontWeight.Bold)
+                            Text("View Discussion & Blog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
                         }
 
-                        Spacer(modifier = Modifier.height(80.dp)) // FAB spacing
+                        Spacer(modifier = Modifier.height(100.dp)) // FAB spacing
                     }
                 }
                 is DetailUiState.Error -> {

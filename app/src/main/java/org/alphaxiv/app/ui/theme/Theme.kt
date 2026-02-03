@@ -107,6 +107,7 @@ fun AlphaXivTheme(
         colorScheme = colorScheme,
         typography = Typography,
         shapes = Shapes,
+        motionScheme = MotionScheme.expressive(),
         content = content
     )
 }

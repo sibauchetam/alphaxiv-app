@@ -87,7 +87,7 @@ fun BlogScreen(
             when (val state = uiState) {
                 is BlogUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingIndicator()
+                        CircularWavyProgressIndicator()
                     }
                 }
                 is BlogUiState.Success -> {

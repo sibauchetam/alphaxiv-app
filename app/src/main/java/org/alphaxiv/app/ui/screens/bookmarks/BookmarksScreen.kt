@@ -43,7 +43,7 @@ fun BookmarksScreen(
             when (val state = uiState) {
                 is BookmarkUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingIndicator()
+                        CircularWavyProgressIndicator()
                     }
                 }
                 is BookmarkUiState.Success -> {

@@ -67,7 +67,7 @@ fun SearchScreen(
                 }
                 is SearchUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingIndicator()
+                        CircularWavyProgressIndicator()
                     }
                 }
                 is SearchUiState.Success -> {

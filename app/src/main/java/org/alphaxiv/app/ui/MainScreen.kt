@@ -21,11 +21,9 @@ import org.alphaxiv.app.ui.screens.blog.BlogScreen
 import org.alphaxiv.app.ui.screens.bookmarks.BookmarksScreen
 import org.alphaxiv.app.ui.screens.details.DetailScreen
 import org.alphaxiv.app.ui.screens.feed.FeedScreen
-import org.alphaxiv.app.ui.screens.search.SearchScreen
 
 sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     data object Feed : Screen("feed", "Explore", Icons.Default.Explore)
-    data object Search : Screen("search", "Search", Icons.Default.Search)
     data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
 }
 
@@ -42,19 +40,12 @@ fun MainScreen() {
             NavHost(
                 navController = navController,
                 startDestination = Screen.Feed.route,
-                modifier = Modifier.padding(bottom = if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) 0.dp else innerPadding.calculateBottomPadding())
+                modifier = Modifier.padding(bottom = if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) 0.dp else innerPadding.calculateBottomPadding())
             ) {
                 composable(Screen.Feed.route) {
                     FeedScreen(
                         viewModel = hiltViewModel(),
                         onPaperClick = { id -> navController.navigate("details/$id") },
-                        onSearchClick = { navController.navigate(Screen.Search.route) }
-                    )
-                }
-                composable(Screen.Search.route) {
-                    SearchScreen(
-                        viewModel = hiltViewModel(),
-                        onPaperClick = { id -> navController.navigate("details/$id") }
                     )
                 }
                 composable(Screen.Bookmarks.route) {
@@ -89,7 +80,7 @@ fun MainScreen() {
             }
 
                         // Expressive Floating Bottom Bar
-            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
+            if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -107,7 +98,7 @@ fun MainScreen() {
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
+                        val items = listOf(Screen.Feed, Screen.Bookmarks)
                         items.forEach { screen ->
                             val isSelected = currentRoute == screen.route
                             Box(contentAlignment = Alignment.Center) {

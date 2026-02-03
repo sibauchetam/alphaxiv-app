@@ -1,18 +1,15 @@
 package org.alphaxiv.app.ui.screens.feed
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -20,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -35,68 +33,134 @@ import org.alphaxiv.app.data.model.Paper
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel,
-    onPaperClick: (String) -> Unit,
-    onSearchClick: () -> Unit
+    onPaperClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val searchState by viewModel.searchState.collectAsState()
+
+    var searchQuery by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
+
     var selectedSort by remember { mutableStateOf("Hot") }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        onClick = onSearchClick
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Search papers...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            Column {
+                SearchBar(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = if (searchActive) 0.dp else 16.dp, vertical = if (searchActive) 0.dp else 8.dp)
+                        .animateContentSize(),
+                    inputField = {
+                        SearchBarDefaults.InputField(
+                            query = searchQuery,
+                            onQueryChange = {
+                                searchQuery = it
+                                viewModel.search(it)
+                            },
+                            onSearch = { viewModel.search(it) },
+                            expanded = searchActive,
+                            onExpandedChange = { searchActive = it },
+                            placeholder = { Text("Search papers...") },
+                            leadingIcon = {
+                                if (searchActive) {
+                                    IconButton(onClick = {
+                                        searchActive = false
+                                        searchQuery = ""
+                                        viewModel.clearSearch()
+                                    }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                } else {
+                                    Icon(Icons.Default.Search, contentDescription = null)
+                                }
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        searchQuery = ""
+                                        viewModel.clearSearch()
+                                    }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                    }
+                                }
+                            }
+                        )
+                    },
+                    expanded = searchActive,
+                    onExpandedChange = { searchActive = it },
+                    colors = SearchBarDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    shape = if (searchActive) RectangleShape else MaterialTheme.shapes.extraLarge
+                ) {
+                    // Search results content
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when (val state = searchState) {
+                            is SearchUiState.Loading -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularWavyProgressIndicator()
+                                }
+                            }
+                            is SearchUiState.Success -> {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(state.results, key = { it.id }) { paper ->
+                                        PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
+                                    }
+                                }
+                            }
+                            is SearchUiState.Error -> {
+                                Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                            is SearchUiState.Idle -> {
+                                if (searchQuery.isEmpty()) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("Type to search papers", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { /* Open drawer */ }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Random paper */ }) {
-                        Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                windowInsets = WindowInsets.statusBars
-            )
+                }
+
+                if (!searchActive) {
+                    TopAppBar(
+                        title = {
+                            Text("alphaXiv", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { /* Open drawer */ }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { /* Random paper */ }) {
+                                Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
+                            }
+                        },
+                        scrollBehavior = scrollBehavior,
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        ),
+                        windowInsets = WindowInsets(0)
+                    )
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { innerPadding ->
-        val isLoading = uiState is FeedUiState.Loading
-        val papers = (uiState as? FeedUiState.Success)?.papers ?: emptyList()
+        val uiStateValue = uiState
+        val isLoading = uiStateValue is FeedUiState.Loading
+        val papers = (uiStateValue as? FeedUiState.Success)?.papers ?: emptyList()
 
         PullToRefreshBox(
             isRefreshing = isLoading && papers.isNotEmpty(),
@@ -139,14 +203,14 @@ fun FeedScreen(
                         }
                     }
 
-                    if (uiState is FeedUiState.Success) {
+                    if (uiStateValue is FeedUiState.Success) {
                         items(papers, key = { it.id }) { paper ->
                             PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
                         }
-                    } else if (uiState is FeedUiState.Error) {
+                    } else if (uiStateValue is FeedUiState.Error) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text(text = (uiState as FeedUiState.Error).message, color = MaterialTheme.colorScheme.error)
+                                Text(text = uiStateValue.message, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -266,4 +330,3 @@ fun PaperCard(
         }
     }
 }
-

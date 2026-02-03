@@ -1,6 +1,8 @@
 plugins {
+    id "app.cash.paparazzi"
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
+    id "org.jetbrains.kotlin.plugin.compose"
     id "com.google.dagger.hilt.android"
     id "kotlin-kapt"
 }
@@ -38,9 +40,7 @@ android {
     buildFeatures {
         compose true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion "1.5.10"
-    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

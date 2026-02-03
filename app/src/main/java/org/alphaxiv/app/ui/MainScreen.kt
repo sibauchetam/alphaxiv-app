@@ -88,7 +88,7 @@ fun MainScreen() {
                 }
             }
 
-            // Expressive Floating Bottom Bar
+                        // Expressive Floating Bottom Bar
             if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
                 Surface(
                     modifier = Modifier
@@ -96,41 +96,50 @@ fun MainScreen() {
                         .padding(horizontal = 24.dp, vertical = 24.dp)
                         .widthIn(max = 400.dp)
                         .fillMaxWidth()
-                        .height(64.dp),
+                        .height(72.dp),
                     shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
-                    tonalElevation = 6.dp,
-                    shadowElevation = 8.dp
+                    tonalElevation = 8.dp,
+                    shadowElevation = 12.dp
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
                         items.forEach { screen ->
                             val isSelected = currentRoute == screen.route
-                            IconButton(
-                                onClick = {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(
-                                    imageVector = screen.icon,
-                                    contentDescription = screen.label,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(if (isSelected) 28.dp else 24.dp)
-                                )
+                            Box(contentAlignment = Alignment.Center) {
+                                if (isSelected) {
+                                    Surface(
+                                        modifier = Modifier.size(width = 64.dp, height = 40.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = MaterialTheme.shapes.large
+                                    ) {}
+                                }
+                                IconButton(
+                                    onClick = {
+                                        navController.navigate(screen.route) {
+                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = screen.icon,
+                                        contentDescription = screen.label,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
+    }
     }
 }

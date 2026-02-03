@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import org.alphaxiv.app.data.model.Paper
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DetailScreen(
     id: String,
@@ -85,13 +87,40 @@ fun DetailScreen(
                 },
                 scrollBehavior = scrollBehavior
             )
+        },
+        bottomBar = {
+            if (uiState is DetailUiState.Success) {
+                val paper = (uiState as DetailUiState.Success).paper
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    HorizontalFloatingAppBar(expanded = true,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        IconButton(onClick = {
+                            val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                            context.startActivity(intent)
+                        }) {
+                            Icon(Icons.Default.Description, contentDescription = "Read Paper")
+                        }
+                        VerticalDivider(modifier = Modifier.height(24.dp))
+                        IconButton(onClick = onViewBlog) {
+                            Icon(Icons.Default.Chat, contentDescription = "Discussion")
+                        }
+                    }
+                }
+            }
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val state = uiState) {
                 is DetailUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        LoadingIndicator()
                     }
                 }
                 is DetailUiState.Success -> {
@@ -150,33 +179,7 @@ fun DetailScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
-                                    context.startActivity(intent)
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.large,
-                                contentPadding = PaddingValues(vertical = 16.dp)
-                            ) {
-                                Text("Read Paper")
-                            }
-                            OutlinedButton(
-                                onClick = onViewBlog,
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.large,
-                                contentPadding = PaddingValues(vertical = 16.dp)
-                            ) {
-                                Text("Discussion")
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(100.dp)) // Padding for floating app bar
                     }
                 }
                 is DetailUiState.Error -> {

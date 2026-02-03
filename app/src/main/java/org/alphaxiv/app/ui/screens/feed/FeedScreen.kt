@@ -26,7 +26,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import org.alphaxiv.app.data.model.Paper
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel,
@@ -48,12 +48,13 @@ fun FeedScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             SortSelector(
@@ -73,7 +74,7 @@ fun FeedScreen(
                     is FeedUiState.Loading -> {
                         if ((uiState as? FeedUiState.Success)?.papers?.isEmpty() != false) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                                LoadingIndicator()
                             }
                         }
                     }
@@ -93,7 +94,6 @@ fun FeedScreen(
                             Text(text = state.message, color = MaterialTheme.colorScheme.error)
                         }
                     }
-                    else -> {}
                 }
             }
         }
@@ -134,8 +134,9 @@ fun PaperCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {

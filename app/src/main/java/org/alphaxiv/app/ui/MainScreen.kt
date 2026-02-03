@@ -27,6 +27,7 @@ sealed class Screen(val route: String, val label: String, val icon: androidx.com
     data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -36,10 +37,10 @@ fun MainScreen() {
     Scaffold(
         bottomBar = {
             if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
-                NavigationBar {
+                ShortNavigationBar {
                     val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
                     items.forEach { screen ->
-                        NavigationBarItem(
+                        ShortNavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = screen.label) },
                             label = { Text(screen.label) },
                             selected = currentRoute == screen.route,

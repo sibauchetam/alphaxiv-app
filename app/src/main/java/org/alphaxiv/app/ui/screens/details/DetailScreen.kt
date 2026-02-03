@@ -1,5 +1,6 @@
 package org.alphaxiv.app.ui.screens.details
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,7 +41,7 @@ fun DetailScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -127,6 +128,7 @@ fun DetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
+                            .animateContentSize()
                     ) {
                         if (paper.thumbnailUrl != null) {
                             Card(

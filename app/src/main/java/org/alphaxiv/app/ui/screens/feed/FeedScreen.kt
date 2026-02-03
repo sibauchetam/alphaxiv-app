@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -36,24 +37,67 @@ fun FeedScreen(
     var selectedSort by remember { mutableStateOf("Hot") }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
+    var searchQuery by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(
-                title = {
-                    Text(
-                        "Explore",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow)) {
+                MediumTopAppBar(
+                    title = {
+                        Text(
+                            "alphaXiv",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.mediumTopAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        titleContentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    actions = {
+                        IconButton(onClick = { /* TODO: Profile or Settings */ }) {
+                            Surface(
+                                modifier = Modifier.size(32.dp),
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("A", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
                 )
-            )
+
+                SearchBar(
+                    inputField = {
+                        SearchBarDefaults.InputField(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearch = { searchActive = false },
+                            expanded = searchActive,
+                            onExpandedChange = { searchActive = it },
+                            placeholder = { Text("Search scientific papers...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                        )
+                    },
+                    expanded = searchActive,
+                    onExpandedChange = { searchActive = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = SearchBarDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    tonalElevation = 2.dp
+                ) {
+                    // Search results or history could go here
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { innerPadding ->
@@ -82,8 +126,8 @@ fun FeedScreen(
                     is FeedUiState.Success -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(20.dp) // More space between cards
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(1.dp) // Tight but clean
                         ) {
                             items(state.papers, key = { it.id }) { paper ->
                                 PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
@@ -108,19 +152,19 @@ fun SortSelector(
     onSortSelected: (String) -> Unit
 ) {
     val options = listOf("Hot", "New", "Top")
-    SingleChoiceSegmentedButtonRow(
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        options.forEachIndexed { index, option ->
-            SegmentedButton(
+        items(options) { option ->
+            FilterChip(
                 selected = selectedSort == option,
                 onClick = { onSortSelected(option) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
-            ) {
-                Text(option, fontWeight = FontWeight.Bold)
-            }
+                label = { Text(option, fontWeight = FontWeight.Bold) },
+                shape = MaterialTheme.shapes.medium
+            )
         }
     }
 }
@@ -130,16 +174,12 @@ fun PaperCard(
     paper: Paper,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
+    Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        color = MaterialTheme.colorScheme.surface
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -147,15 +187,15 @@ fun PaperCard(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 4,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
-                        lineHeight = 28.sp
+                        lineHeight = 26.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = paper.authors.joinToString(", "),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -170,8 +210,8 @@ fun PaperCard(
                             .build(),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(90.dp, 120.dp)
-                            .clip(MaterialTheme.shapes.large)
+                            .size(70.dp, 94.dp)
+                            .clip(MaterialTheme.shapes.medium)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentScale = ContentScale.Crop
                     )
@@ -179,97 +219,70 @@ fun PaperCard(
             }
 
             if (paper.categories.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(paper.categories) { category ->
-                        SuggestionChip(
-                            onClick = { },
-                            label = {
-                                Text(
-                                    text = category,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            },
-                            shape = MaterialTheme.shapes.medium,
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                            ),
-                            border = null
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                text = category,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = paper.summary,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 22.sp
+                lineHeight = 20.sp
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ThumbUp,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${paper.upvoteCount}",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ChatBubbleOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${paper.commentCount}",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
+                Icon(
+                    imageVector = Icons.Default.ThumbUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${paper.upvoteCount}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(
+                    imageVector = Icons.Default.ChatBubbleOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.outline
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${paper.commentCount}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = paper.publishedDate,
@@ -278,6 +291,8 @@ fun PaperCard(
                     fontWeight = FontWeight.Medium
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
         }
     }
 }

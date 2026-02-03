@@ -28,6 +28,18 @@ fun BlogScreen(
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     var showLanguageMenu by remember { mutableStateOf(false) }
 
+    val languages = listOf(
+        "en" to "English",
+        "zh" to "Chinese",
+        "ru" to "Russian",
+        "fr" to "French",
+        "ja" to "Japanese",
+        "es" to "Spanish",
+        "ko" to "Korean",
+        "hi" to "Hindi",
+        "de" to "German"
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -45,32 +57,21 @@ fun BlogScreen(
                         expanded = showLanguageMenu,
                         onDismissRequest = { showLanguageMenu = false }
                     ) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(selected = selectedLanguage == "en", onClick = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("English")
+                        languages.forEach { (code, name) ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(selected = selectedLanguage == code, onClick = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(name)
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.changeLanguage(code)
+                                    showLanguageMenu = false
                                 }
-                            },
-                            onClick = {
-                                viewModel.changeLanguage("en")
-                                showLanguageMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(selected = selectedLanguage == "zh", onClick = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Chinese")
-                                }
-                            },
-                            onClick = {
-                                viewModel.changeLanguage("zh")
-                                showLanguageMenu = false
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             )

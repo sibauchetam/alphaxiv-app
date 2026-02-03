@@ -15,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import org.alphaxiv.app.data.model.Paper
 
@@ -30,16 +33,27 @@ fun DetailScreen(
     onBack: () -> Unit,
     onViewBlog: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(id) {
         viewModel.loadPaper(id)
     }
 
     val uiState by viewModel.uiState.collectAsState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("Paper Details") },
+            LargeTopAppBar(
+                title = {
+                    Text(
+                        text = if (uiState is DetailUiState.Success) (uiState as DetailUiState.Success).paper.title else "Paper Details",
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -55,7 +69,6 @@ fun DetailScreen(
                             )
                         }
                     }
-                    val context = LocalContext.current
                     IconButton(onClick = {
                         if (state is DetailUiState.Success) {
                             val sendIntent: Intent = Intent().apply {
@@ -69,7 +82,8 @@ fun DetailScreen(
                     }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { innerPadding ->
@@ -98,53 +112,71 @@ fun DetailScreen(
                                     .clip(MaterialTheme.shapes.extraLarge),
                                 contentScale = ContentScale.Crop
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
                         }
-                        Text(
-                            text = paper.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+
                         Text(
                             text = paper.authors.joinToString(", "),
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Abstract",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = paper.summary,
-                            style = MaterialTheme.typography.bodyLarge
+                            text = "Published: ${paper.publishedDate}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline
                         )
+
                         Spacer(modifier = Modifier.height(24.dp))
-                        val context = LocalContext.current
-                        Button(
-                            onClick = {
-                                val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.extraLarge
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.large,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("View PDF")
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Abstract",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = paper.summary,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    lineHeight = 24.sp
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = onViewBlog,
+
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.extraLarge
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("View Blog")
+                            Button(
+                                onClick = {
+                                    val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.large,
+                                contentPadding = PaddingValues(vertical = 16.dp)
+                            ) {
+                                Text("Read Paper")
+                            }
+                            OutlinedButton(
+                                onClick = onViewBlog,
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.large,
+                                contentPadding = PaddingValues(vertical = 16.dp)
+                            ) {
+                                Text("Discussion")
+                            }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
                 is DetailUiState.Error -> {

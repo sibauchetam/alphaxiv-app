@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.alphaxiv.app.ui.components.LatexMarkdownText
 
@@ -27,6 +29,7 @@ fun BlogScreen(
     val uiState by viewModel.uiState.collectAsState()
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     var showLanguageMenu by remember { mutableStateOf(false) }
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val languages = listOf(
         "en" to "English",
@@ -41,9 +44,10 @@ fun BlogScreen(
     )
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Blog") },
+                title = { Text("Discussion", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -73,7 +77,8 @@ fun BlogScreen(
                             )
                         }
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { innerPadding ->

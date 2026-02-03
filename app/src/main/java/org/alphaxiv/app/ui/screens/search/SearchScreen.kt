@@ -72,8 +72,8 @@ fun SearchScreen(
                 is SearchUiState.Success -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                        contentPadding = PaddingValues(bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(state.results, key = { it.id }) { paper ->
                             PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })

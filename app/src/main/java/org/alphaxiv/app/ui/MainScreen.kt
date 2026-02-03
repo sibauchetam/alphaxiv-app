@@ -1,6 +1,7 @@
 package org.alphaxiv.app.ui
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Explore
@@ -35,81 +36,100 @@ fun MainScreen() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
-        bottomBar = {
-            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 0.dp
-                ) {
-                    val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
-                    items.forEach { screen ->
-                        NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = screen.label) },
-                            label = { Text(screen.label) },
-                            selected = currentRoute == screen.route,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        )
-                    }
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Feed.route,
+                modifier = Modifier.padding(bottom = if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) 0.dp else innerPadding.calculateBottomPadding())
+            ) {
+                composable(Screen.Feed.route) {
+                    FeedScreen(
+                        viewModel = hiltViewModel(),
+                        onPaperClick = { id -> navController.navigate("details/$id") },
+                        onSearchClick = { navController.navigate(Screen.Search.route) }
+                    )
+                }
+                composable(Screen.Search.route) {
+                    SearchScreen(
+                        viewModel = hiltViewModel(),
+                        onPaperClick = { id -> navController.navigate("details/$id") }
+                    )
+                }
+                composable(Screen.Bookmarks.route) {
+                    BookmarksScreen(
+                        viewModel = hiltViewModel(),
+                        onPaperClick = { id -> navController.navigate("details/$id") }
+                    )
+                }
+                composable(
+                    route = "details/{paperId}",
+                    arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+                    DetailScreen(
+                        id = paperId,
+                        viewModel = hiltViewModel(),
+                        onBack = { navController.popBackStack() },
+                        onViewBlog = { navController.navigate("blog/$paperId") }
+                    )
+                }
+                composable(
+                    route = "blog/{paperId}",
+                    arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+                    BlogScreen(
+                        id = paperId,
+                        viewModel = hiltViewModel(),
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Feed.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Feed.route) {
-                FeedScreen(
-                    viewModel = hiltViewModel(),
-                    onPaperClick = { id -> navController.navigate("details/$id") }
-                )
-            }
-            composable(Screen.Search.route) {
-                SearchScreen(
-                    viewModel = hiltViewModel(),
-                    onPaperClick = { id -> navController.navigate("details/$id") }
-                )
-            }
-            composable(Screen.Bookmarks.route) {
-                BookmarksScreen(
-                    viewModel = hiltViewModel(),
-                    onPaperClick = { id -> navController.navigate("details/$id") }
-                )
-            }
-            composable(
-                route = "details/{paperId}",
-                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
-                DetailScreen(
-                    id = paperId,
-                    viewModel = hiltViewModel(),
-                    onBack = { navController.popBackStack() },
-                    onViewBlog = { navController.navigate("blog/$paperId") }
-                )
-            }
-            composable(
-                route = "blog/{paperId}",
-                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
-                BlogScreen(
-                    id = paperId,
-                    viewModel = hiltViewModel(),
-                    onBack = { navController.popBackStack() }
-                )
+
+            // Expressive Floating Bottom Bar
+            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 24.dp, vertical = 24.dp)
+                        .widthIn(max = 400.dp)
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
+                    tonalElevation = 6.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
+                        items.forEach { screen ->
+                            val isSelected = currentRoute == screen.route
+                            IconButton(
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = screen.icon,
+                                    contentDescription = screen.label,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(if (isSelected) 28.dp else 24.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

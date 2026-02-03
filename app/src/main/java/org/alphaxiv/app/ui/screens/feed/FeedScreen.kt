@@ -35,7 +35,7 @@ fun FeedScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedSort by remember { mutableStateOf("Hot") }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     var searchQuery by remember { mutableStateOf("") }
     var searchActive by remember { mutableStateOf(false) }
@@ -43,61 +43,26 @@ fun FeedScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow)) {
-                MediumTopAppBar(
-                    title = {
-                        Text(
-                            "alphaXiv",
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    },
-                    scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.mediumTopAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    actions = {
-                        IconButton(onClick = { /* TODO: Profile or Settings */ }) {
-                            Surface(
-                                modifier = Modifier.size(32.dp),
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text("A", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
+            TopAppBar(
+                title = {
+                    Text(
+                        "alphaXiv",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black
+                    )
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                ),
+                actions = {
+                    IconButton(onClick = { searchActive = true }) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
                     }
-                )
-
-                SearchBar(
-                    inputField = {
-                        SearchBarDefaults.InputField(
-                            query = searchQuery,
-                            onQueryChange = { searchQuery = it },
-                            onSearch = { searchActive = false },
-                            expanded = searchActive,
-                            onExpandedChange = { searchActive = it },
-                            placeholder = { Text("Search scientific papers...") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
-                        )
-                    },
-                    expanded = searchActive,
-                    onExpandedChange = { searchActive = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = SearchBarDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    tonalElevation = 2.dp
-                ) {
-                    // Search results or history could go here
                 }
-            }
+            )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { innerPadding ->
@@ -110,38 +75,40 @@ fun FeedScreen(
                 }
             )
 
+            val isLoading = uiState is FeedUiState.Loading
+            val papers = (uiState as? FeedUiState.Success)?.papers ?: emptyList()
+
             PullToRefreshBox(
-                isRefreshing = uiState is FeedUiState.Loading,
+                isRefreshing = isLoading && papers.isNotEmpty(),
                 onRefresh = { viewModel.loadFeed(selectedSort) },
                 modifier = Modifier.fillMaxSize()
             ) {
-                when (val state = uiState) {
-                    is FeedUiState.Loading -> {
-                        if ((uiState as? FeedUiState.Success)?.papers?.isEmpty() != false) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularWavyProgressIndicator()
-                            }
+                if (isLoading && papers.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularWavyProgressIndicator()
+                    }
+                } else if (uiState is FeedUiState.Success) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        items(papers, key = { it.id }) { paper ->
+                            PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
                         }
                     }
-                    is FeedUiState.Success -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(1.dp) // Tight but clean
-                        ) {
-                            items(state.papers, key = { it.id }) { paper ->
-                                PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
-                            }
-                        }
-                    }
-                    is FeedUiState.Error -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                        }
+                } else if (uiState is FeedUiState.Error) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = (uiState as FeedUiState.Error).message, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
         }
+    }
+
+    if (searchActive) {
+        // Full screen search or similar could be handled here
+        // For now, keeping it simple
     }
 }
 
@@ -184,14 +151,14 @@ fun PaperCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = paper.title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
-                        lineHeight = 26.sp
+                        lineHeight = 24.sp
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = paper.authors.joinToString(", "),
                         style = MaterialTheme.typography.labelMedium,
@@ -210,7 +177,7 @@ fun PaperCard(
                             .build(),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(70.dp, 94.dp)
+                            .size(64.dp, 86.dp)
                             .clip(MaterialTheme.shapes.medium)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentScale = ContentScale.Crop
@@ -219,14 +186,14 @@ fun PaperCard(
             }
 
             if (paper.categories.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(paper.categories) { category ->
                         Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                             shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Text(
@@ -241,17 +208,17 @@ fun PaperCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = paper.summary,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 20.sp
+                lineHeight = 18.sp
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -292,7 +259,7 @@ fun PaperCard(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
         }
     }
 }

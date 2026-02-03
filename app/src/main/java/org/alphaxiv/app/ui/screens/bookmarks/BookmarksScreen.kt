@@ -28,14 +28,16 @@ fun BookmarksScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                title = { Text("Bookmarks", fontWeight = FontWeight.Bold) },
-                scrollBehavior = scrollBehavior
+            TopAppBar(
+                title = { Text("Bookmarks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             )
         }
     ) { innerPadding ->
@@ -50,7 +52,7 @@ fun BookmarksScreen(
                     if (state.papers.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                text = "Your saved papers will appear here",
+                                text = "No saved papers",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -58,8 +60,8 @@ fun BookmarksScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
                             items(state.papers, key = { it.id }) { paper ->
                                 PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })

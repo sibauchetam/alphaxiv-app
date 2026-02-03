@@ -24,14 +24,16 @@ fun SearchScreen(
 ) {
     var query by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Search Papers", fontWeight = FontWeight.Bold) },
-                scrollBehavior = scrollBehavior
+            TopAppBar(
+                title = { Text("Search", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             )
         }
     ) { innerPadding ->
@@ -44,7 +46,7 @@ fun SearchScreen(
                         onSearch = { viewModel.search(query) },
                         expanded = false,
                         onExpandedChange = { },
-                        placeholder = { Text("Search by title, author, or keyword") },
+                        placeholder = { Text("Search papers...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                     )
                 },
@@ -52,17 +54,14 @@ fun SearchScreen(
                 onExpandedChange = { },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(16.dp),
+                colors = SearchBarDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) { }
 
             when (val state = uiState) {
                 is SearchUiState.Idle -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Find scientific breakthroughs",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        Text(text = "Find breakthroughs", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
                     }
                 }
                 is SearchUiState.Loading -> {
@@ -73,8 +72,8 @@ fun SearchScreen(
                 is SearchUiState.Success -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         items(state.results, key = { it.id }) { paper ->
                             PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })

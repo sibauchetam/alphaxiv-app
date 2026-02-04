@@ -5,7 +5,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -34,18 +33,20 @@ fun MainScreen() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets.statusBars
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             NavHost(
                 navController = navController,
                 startDestination = Screen.Feed.route,
-                modifier = Modifier.padding(bottom = if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) 0.dp else innerPadding.calculateBottomPadding())
+                modifier = Modifier.fillMaxSize()
             ) {
                 composable(Screen.Feed.route) {
                     FeedScreen(
                         viewModel = hiltViewModel(),
                         onPaperClick = { id -> navController.navigate("details/$id") },
+                        onMenuClick = { /* Handle menu if needed */ }
                     )
                 }
                 composable(Screen.Bookmarks.route) {
@@ -79,7 +80,7 @@ fun MainScreen() {
                 }
             }
 
-                        // Expressive Floating Bottom Bar
+            // Expressive Floating Bottom Bar
             if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) {
                 Surface(
                     modifier = Modifier
@@ -87,11 +88,11 @@ fun MainScreen() {
                         .padding(horizontal = 24.dp, vertical = 24.dp)
                         .widthIn(max = 400.dp)
                         .fillMaxWidth()
-                        .height(72.dp),
+                        .height(64.dp),
                     shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
-                    tonalElevation = 8.dp,
-                    shadowElevation = 12.dp
+                    tonalElevation = 4.dp,
+                    shadowElevation = 8.dp
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
@@ -104,7 +105,7 @@ fun MainScreen() {
                             Box(contentAlignment = Alignment.Center) {
                                 if (isSelected) {
                                     Surface(
-                                        modifier = Modifier.size(width = 64.dp, height = 40.dp),
+                                        modifier = Modifier.size(width = 64.dp, height = 36.dp),
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                         shape = MaterialTheme.shapes.large
                                     ) {}
@@ -131,6 +132,6 @@ fun MainScreen() {
                     }
                 }
             }
-    }
+        }
     }
 }

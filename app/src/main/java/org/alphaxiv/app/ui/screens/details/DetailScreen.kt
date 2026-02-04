@@ -47,15 +47,7 @@ fun DetailScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = if (uiState is DetailUiState.Success) (uiState as DetailUiState.Success).paper.title else "Paper Details",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -168,14 +160,6 @@ fun DetailScreen(
                             tonalElevation = 1.dp
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
-                                Text(
-                                    text = "Abstract",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 1.sp
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = paper.summary,
                                     style = MaterialTheme.typography.bodyLarge,

@@ -19,8 +19,11 @@ class FeedViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<FeedUiState>(FeedUiState.Loading)
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    private val _searchState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
-    val searchState: StateFlow<SearchUiState> = _searchState.asStateFlow()
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     init {
         loadFeed("Hot")
@@ -28,34 +31,21 @@ class FeedViewModel @Inject constructor(
 
     fun loadFeed(sort: String) {
         viewModelScope.launch {
+            _isRefreshing.value = true
             _uiState.value = FeedUiState.Loading
             try {
                 val papers = repository.getFeed(sort)
                 _uiState.value = FeedUiState.Success(papers)
             } catch (e: Exception) {
                 _uiState.value = FeedUiState.Error(e.message ?: "Unknown error")
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }
 
-    fun search(query: String) {
-        if (query.isBlank()) {
-            _searchState.value = SearchUiState.Idle
-            return
-        }
-        viewModelScope.launch {
-            _searchState.value = SearchUiState.Loading
-            try {
-                val results = repository.searchPapers(query)
-                _searchState.value = SearchUiState.Success(results)
-            } catch (e: Exception) {
-                _searchState.value = SearchUiState.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    fun clearSearch() {
-        _searchState.value = SearchUiState.Idle
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
     }
 }
 
@@ -63,11 +53,4 @@ sealed interface FeedUiState {
     data object Loading : FeedUiState
     data class Success(val papers: List<Paper>) : FeedUiState
     data class Error(val message: String) : FeedUiState
-}
-
-sealed interface SearchUiState {
-    data object Idle : SearchUiState
-    data object Loading : SearchUiState
-    data class Success(val results: List<Paper>) : SearchUiState
-    data class Error(val message: String) : SearchUiState
 }

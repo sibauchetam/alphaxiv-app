@@ -47,11 +47,16 @@ fun FeedScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(top = 8.dp)
+            ) {
                 SearchBar(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = if (searchActive) 0.dp else 16.dp, vertical = if (searchActive) 0.dp else 8.dp)
+                        .align(Alignment.TopCenter)
+                        .padding(horizontal = if (searchActive) 0.dp else 16.dp)
                         .animateContentSize(),
                     inputField = {
                         SearchBarDefaults.InputField(
@@ -63,7 +68,7 @@ fun FeedScreen(
                             onSearch = { viewModel.search(it) },
                             expanded = searchActive,
                             onExpandedChange = { searchActive = it },
-                            placeholder = { Text("Search papers...") },
+                            placeholder = { Text("Search alphaXiv...") },
                             leadingIcon = {
                                 if (searchActive) {
                                     IconButton(onClick = {
@@ -74,16 +79,24 @@ fun FeedScreen(
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                                     }
                                 } else {
-                                    Icon(Icons.Default.Search, contentDescription = null)
+                                    IconButton(onClick = { /* Open drawer */ }) {
+                                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                    }
                                 }
                             },
                             trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = {
-                                        searchQuery = ""
-                                        viewModel.clearSearch()
-                                    }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                if (searchActive) {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = {
+                                            searchQuery = ""
+                                            viewModel.clearSearch()
+                                        }) {
+                                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                                        }
+                                    }
+                                } else {
+                                    IconButton(onClick = { /* Random paper */ }) {
+                                        Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
                                     }
                                 }
                             }
@@ -94,7 +107,9 @@ fun FeedScreen(
                     colors = SearchBarDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
-                    shape = if (searchActive) RectangleShape else MaterialTheme.shapes.extraLarge
+                    shape = if (searchActive) RectangleShape else MaterialTheme.shapes.extraLarge,
+                    tonalElevation = 6.dp,
+                    shadowElevation = if (searchActive) 0.dp else 8.dp
                 ) {
                     // Search results content
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -129,30 +144,6 @@ fun FeedScreen(
                             }
                         }
                     }
-                }
-
-                if (!searchActive) {
-                    TopAppBar(
-                        title = {
-                            Text("alphaXiv", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { /* Open drawer */ }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { /* Random paper */ }) {
-                                Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
-                            }
-                        },
-                        scrollBehavior = scrollBehavior,
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        windowInsets = WindowInsets(0)
-                    )
                 }
             }
         },

@@ -10,6 +10,7 @@ import org.junit.Rule
 import org.junit.Test
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -35,9 +36,13 @@ class ExpressiveUITest {
     @Test
     fun snapPaperCard() {
         paparazzi.snapshot {
-            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
+            AlphaXivTheme(darkTheme = false, dynamicColor = false) {
                 Box(modifier = Modifier.padding(16.dp)) {
-                    PaperCard(paper = mockPaper, onClick = {})
+                    PaperCard(
+                        paper = mockPaper,
+                        onClick = {},
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
                 }
             }
         }
@@ -46,7 +51,7 @@ class ExpressiveUITest {
     @Test
     fun snapHeroPaperCard() {
         paparazzi.snapshot {
-            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
+            AlphaXivTheme(darkTheme = false, dynamicColor = false) {
                 Box(modifier = Modifier.padding(16.dp)) {
                     HeroPaperCard(paper = mockPaper, onClick = {})
                 }

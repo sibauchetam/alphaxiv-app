@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +46,7 @@ fun DetailScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = { },
@@ -79,9 +81,8 @@ fun DetailScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
             )
         },
@@ -89,7 +90,7 @@ fun DetailScreen(
             if (uiState is DetailUiState.Success) {
                 val paper = (uiState as DetailUiState.Success).paper
                 ExtendedFloatingActionButton(
-                    text = { Text("Read Paper", fontWeight = FontWeight.Bold) },
+                    text = { Text("Read Paper", fontWeight = FontWeight.Black) },
                     icon = { Icon(Icons.Default.Description, contentDescription = null) },
                     onClick = {
                         val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
@@ -98,11 +99,10 @@ fun DetailScreen(
                     },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.extraLarge
                 )
             }
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val state = uiState) {
@@ -117,69 +117,77 @@ fun DetailScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
+                            .padding(24.dp)
                             .animateContentSize()
                     ) {
                         Text(
                             text = paper.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface,
-                            lineHeight = 32.sp
+                            lineHeight = 36.sp
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = paper.authors.joinToString(", "),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         if (paper.thumbnailUrl != null) {
-                            Card(
-                                shape = MaterialTheme.shapes.large,
-                                modifier = Modifier.fillMaxWidth()
+                            Surface(
+                                shape = MaterialTheme.shapes.extraLarge,
+                                modifier = Modifier.fillMaxWidth().height(240.dp),
+                                tonalElevation = 2.dp
                             ) {
                                 AsyncImage(
                                     model = paper.thumbnailUrl,
                                     contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(240.dp),
+                                    modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
                             }
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(32.dp))
                         }
 
                         Surface(
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceBright,
+                            shape = MaterialTheme.shapes.extraLarge,
                             modifier = Modifier.fillMaxWidth(),
-                            tonalElevation = 1.dp
+                            tonalElevation = 2.dp,
+                            shadowElevation = 4.dp
                         ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
+                            Column(modifier = Modifier.padding(24.dp)) {
+                                Text(
+                                    text = "Abstract",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    letterSpacing = 1.sp
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     text = paper.summary,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    lineHeight = 26.sp,
+                                    lineHeight = 28.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedButton(
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        FilledTonalButton(
                             onClick = onViewBlog,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            contentPadding = PaddingValues(16.dp)
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = MaterialTheme.shapes.large
                         ) {
-                            Text("View Blog & Discussion", fontWeight = FontWeight.Bold)
+                            Text("Discussion", fontWeight = FontWeight.Bold)
                         }
 
-                        Spacer(modifier = Modifier.height(100.dp))
+                        Spacer(modifier = Modifier.height(120.dp))
                     }
                 }
                 is DetailUiState.Error -> {

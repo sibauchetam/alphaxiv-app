@@ -21,116 +21,55 @@ import org.alphaxiv.app.ui.screens.bookmarks.BookmarksScreen
 import org.alphaxiv.app.ui.screens.details.DetailScreen
 import org.alphaxiv.app.ui.screens.feed.FeedScreen
 
-sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    data object Feed : Screen("feed", "Explore", Icons.Default.Explore)
-    data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
-}
-
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets.statusBars
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            NavHost(
-                navController = navController,
-                startDestination = Screen.Feed.route,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                composable(Screen.Feed.route) {
-                    FeedScreen(
-                        viewModel = hiltViewModel(),
-                        onPaperClick = { id -> navController.navigate("details/$id") },
-                        onMenuClick = { /* Handle menu if needed */ }
-                    )
-                }
-                composable(Screen.Bookmarks.route) {
-                    BookmarksScreen(
-                        viewModel = hiltViewModel(),
-                        onPaperClick = { id -> navController.navigate("details/$id") }
-                    )
-                }
-                composable(
-                    route = "details/{paperId}",
-                    arguments = listOf(navArgument("paperId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
-                    DetailScreen(
-                        id = paperId,
-                        viewModel = hiltViewModel(),
-                        onBack = { navController.popBackStack() },
-                        onViewBlog = { navController.navigate("blog/$paperId") }
-                    )
-                }
-                composable(
-                    route = "blog/{paperId}",
-                    arguments = listOf(navArgument("paperId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
-                    BlogScreen(
-                        id = paperId,
-                        viewModel = hiltViewModel(),
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+    Box(modifier = Modifier.fillMaxSize()) {
+        NavHost(
+            navController = navController,
+            startDestination = "feed",
+            modifier = Modifier.fillMaxSize()
+        ) {
+            composable("feed") {
+                FeedScreen(
+                    viewModel = hiltViewModel(),
+                    onPaperClick = { id -> navController.navigate("details/$id") },
+                    onMenuClick = { /* Open Drawer or Menu */ },
+                    onBookmarksClick = { navController.navigate("bookmarks") }
+                )
             }
-
-            // Expressive Floating Bottom Bar
-            if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 24.dp, vertical = 24.dp)
-                        .widthIn(max = 400.dp)
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
-                    tonalElevation = 4.dp,
-                    shadowElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val items = listOf(Screen.Feed, Screen.Bookmarks)
-                        items.forEach { screen ->
-                            val isSelected = currentRoute == screen.route
-                            Box(contentAlignment = Alignment.Center) {
-                                if (isSelected) {
-                                    Surface(
-                                        modifier = Modifier.size(width = 64.dp, height = 36.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = MaterialTheme.shapes.large
-                                    ) {}
-                                }
-                                IconButton(
-                                    onClick = {
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    modifier = Modifier.size(48.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = screen.icon,
-                                        contentDescription = screen.label,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            composable("bookmarks") {
+                BookmarksScreen(
+                    viewModel = hiltViewModel(),
+                    onPaperClick = { id -> navController.navigate("details/$id") },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "details/{paperId}",
+                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+                DetailScreen(
+                    id = paperId,
+                    viewModel = hiltViewModel(),
+                    onBack = { navController.popBackStack() },
+                    onViewBlog = { navController.navigate("blog/$paperId") }
+                )
+            }
+            composable(
+                route = "blog/{paperId}",
+                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+                BlogScreen(
+                    id = paperId,
+                    viewModel = hiltViewModel(),
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

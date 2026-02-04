@@ -8,6 +8,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -29,7 +30,11 @@ private val LightColorScheme = lightColorScheme(
     background = backgroundLight,
     onBackground = onBackgroundLight,
     surface = surfaceLight,
-    onSurface = onSurfaceLight
+    onSurface = onSurfaceLight,
+    surfaceContainer = Color(0xFFF7F2F1),
+    surfaceContainerHigh = Color(0xFFEBE7E6),
+    surfaceContainerHighest = Color(0xFFE5E1E0),
+    surfaceBright = Color(0xFFFFFFFF)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -41,14 +46,14 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = onSecondaryDark,
     secondaryContainer = secondaryContainerDark,
     onSecondaryContainer = onSecondaryContainerDark,
-    tertiary = tertiaryDark,
-    onTertiary = onTertiaryDark,
-    tertiaryContainer = tertiaryContainerDark,
-    onTertiaryContainer = onTertiaryContainerDark,
     background = backgroundDark,
     onBackground = onBackgroundDark,
     surface = surfaceDark,
-    onSurface = onSurfaceDark
+    onSurface = onSurfaceDark,
+    surfaceContainer = Color(0xFF1A1110),
+    surfaceContainerHigh = Color(0xFF322726),
+    surfaceContainerHighest = Color(0xFF3D3231),
+    surfaceBright = Color(0xFF271D1C)
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -70,7 +75,7 @@ fun AlphaXivTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as? Activity ?: (view.context as? ContextWrapper)?.baseContext as? Activity)?.window
+            val window = view.context.findActivity()?.window
             window?.let {
                 it.statusBarColor = colorScheme.surface.toArgb()
                 WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = !darkTheme
@@ -85,4 +90,10 @@ fun AlphaXivTheme(
         motionScheme = MotionScheme.expressive(),
         content = content
     )
+}
+
+private fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

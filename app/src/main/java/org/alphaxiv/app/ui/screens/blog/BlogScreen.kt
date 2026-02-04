@@ -45,11 +45,11 @@ fun BlogScreen(
     )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Discussion", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -81,7 +81,7 @@ fun BlogScreen(
                     }
                 },
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             )
         }
     ) { innerPadding ->
@@ -97,12 +97,21 @@ fun BlogScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
+                            .padding(24.dp)
                     ) {
-                        LatexMarkdownText(
-                            markdown = state.content,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceBright,
+                            shape = MaterialTheme.shapes.extraLarge,
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(modifier = Modifier.padding(24.dp)) {
+                                LatexMarkdownText(
+                                    markdown = state.content,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
                 is BlogUiState.Error -> {

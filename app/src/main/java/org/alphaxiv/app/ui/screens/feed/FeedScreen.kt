@@ -28,6 +28,8 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import org.alphaxiv.app.data.model.Paper
+import org.alphaxiv.app.ui.components.SkeletonHeroCard
+import org.alphaxiv.app.ui.components.SkeletonPaperCard
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -49,7 +51,7 @@ fun FeedScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
                     .zIndex(1f)
             ) {
                 SearchBar(
@@ -75,9 +77,11 @@ fun FeedScreen(
                     },
                     expanded = expanded,
                     onExpandedChange = { expanded = it },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    tonalElevation = 6.dp
                 ) {
-                    // Search results logic simplified for now
+                    // Search results logic
                 }
             }
 
@@ -90,8 +94,8 @@ fun FeedScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     item {
                         SortSelector(
@@ -104,29 +108,37 @@ fun FeedScreen(
                     }
 
                     val uiStateValue = uiState
-                    if (uiStateValue is FeedUiState.Success) {
-                        val papers = uiStateValue.papers
-                        itemsIndexed(papers, key = { _, paper -> paper.id }) { index, paper ->
-                            if (index == 0) {
-                                HeroPaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
-                            } else {
-                                val containerColor = when (index % 3) {
-                                    1 -> MaterialTheme.colorScheme.surfaceContainerHigh
-                                    2 -> MaterialTheme.colorScheme.surfaceContainerLow
-                                    else -> MaterialTheme.colorScheme.surfaceContainerHighest
-                                }
+                    when (uiStateValue) {
+                        is FeedUiState.Loading -> {
+                            item { SkeletonHeroCard() }
+                            items(5) { SkeletonPaperCard() }
+                        }
+                        is FeedUiState.Success -> {
+                            val papers = uiStateValue.papers
+                            itemsIndexed(papers, key = { _, paper -> paper.id }) { index, paper ->
+                                if (index == 0) {
+                                    HeroPaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
+                                } else {
+                                    // Use secondary/tertiary container colors for more variety
+                                    val containerColor = when (index % 4) {
+                                        1 -> MaterialTheme.colorScheme.secondaryContainer
+                                        2 -> MaterialTheme.colorScheme.tertiaryContainer
+                                        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                    }
 
-                                PaperCard(
-                                    paper = paper,
-                                    onClick = { onPaperClick(paper.id) },
-                                    containerColor = containerColor
-                                )
+                                    PaperCard(
+                                        paper = paper,
+                                        onClick = { onPaperClick(paper.id) },
+                                        containerColor = containerColor
+                                    )
+                                }
                             }
                         }
-                    } else if (uiStateValue is FeedUiState.Error) {
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text(uiStateValue.message, color = MaterialTheme.colorScheme.error)
+                        is FeedUiState.Error -> {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text(uiStateValue.message, color = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
@@ -144,14 +156,14 @@ fun SortSelector(
 ) {
     val options = listOf("Hot", "New", "Top")
     Row(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         options.forEach { option ->
             FilterChip(
                 selected = selectedSort == option,
                 onClick = { onSortSelected(option) },
-                label = { Text(option) },
+                label = { Text(option, fontWeight = FontWeight.Bold) },
                 shape = MaterialTheme.shapes.medium
             )
         }
@@ -167,13 +179,14 @@ fun HeroPaperCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 2.dp
+        tonalElevation = 6.dp,
+        shadowElevation = 4.dp
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(24.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -182,13 +195,13 @@ fun HeroPaperCard(
                 Text(
                     text = paper.title,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    lineHeight = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    lineHeight = 32.sp,
                     modifier = Modifier.weight(1f)
                 )
 
                 if (paper.thumbnailUrl != null) {
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(20.dp))
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(paper.thumbnailUrl)
@@ -196,33 +209,33 @@ fun HeroPaperCard(
                             .build(),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(100.dp)
                             .clip(MaterialTheme.shapes.large),
                         contentScale = ContentScale.Crop
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = paper.summary,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 20.sp
+                lineHeight = 24.sp
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "${paper.upvoteCount}", style = MaterialTheme.typography.labelMedium)
-                Spacer(modifier = Modifier.width(16.dp))
-                Icon(Icons.Default.Comment, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "${paper.commentCount}", style = MaterialTheme.typography.labelMedium)
+                Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "${paper.upvoteCount}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(20.dp))
+                Icon(Icons.Default.Comment, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "${paper.commentCount}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -238,36 +251,39 @@ fun PaperCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         color = containerColor,
         shape = MaterialTheme.shapes.large,
-        tonalElevation = 1.dp
+        tonalElevation = 3.dp,
+        shadowElevation = 2.dp
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = paper.publishedDate,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = paper.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 26.sp
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "${paper.upvoteCount}", style = MaterialTheme.typography.labelSmall)
+                    Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "${paper.upvoteCount}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black)
                 }
             }
 
@@ -279,7 +295,7 @@ fun PaperCard(
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(80.dp)
                         .clip(MaterialTheme.shapes.medium),
                     contentScale = ContentScale.Crop
                 )

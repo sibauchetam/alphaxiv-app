@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import org.alphaxiv.app.ui.components.SkeletonPaperCard
 import org.alphaxiv.app.ui.screens.feed.PaperCard
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -30,8 +31,12 @@ fun BookmarksScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is BookmarkUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularWavyProgressIndicator()
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 20.dp, bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    items(10) { SkeletonPaperCard() }
                 }
             }
             is BookmarkUiState.Success -> {
@@ -46,14 +51,14 @@ fun BookmarksScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(top = 20.dp, bottom = 140.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
                         itemsIndexed(state.papers, key = { _, paper -> paper.id }) { index, paper ->
-                            val containerColor = when (index % 3) {
-                                0 -> MaterialTheme.colorScheme.surfaceContainerHigh
-                                1 -> MaterialTheme.colorScheme.surfaceContainerLow
-                                else -> MaterialTheme.colorScheme.surfaceContainerHighest
+                            val containerColor = when (index % 4) {
+                                1 -> MaterialTheme.colorScheme.secondaryContainer
+                                2 -> MaterialTheme.colorScheme.tertiaryContainer
+                                else -> MaterialTheme.colorScheme.surfaceContainerHigh
                             }
 
                             PaperCard(

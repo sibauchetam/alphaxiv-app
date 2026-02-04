@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,13 +31,16 @@ fun BookmarksScreen(
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Bookmarks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                title = { Text("Bookmarks", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black) },
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
             )
         }
     ) { innerPadding ->
@@ -60,11 +63,27 @@ fun BookmarksScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 100.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(state.papers, key = { it.id }) { paper ->
-                                PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
+                            itemsIndexed(state.papers, key = { _, paper -> paper.id }) { index, paper ->
+                                val containerColor = when (index % 4) {
+                                    0 -> MaterialTheme.colorScheme.tertiaryContainer
+                                    1 -> MaterialTheme.colorScheme.secondaryContainer
+                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                }
+                                val onContainerColor = when (index % 4) {
+                                    0 -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    1 -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+
+                                PaperCard(
+                                    paper = paper,
+                                    onClick = { onPaperClick(paper.id) },
+                                    containerColor = containerColor,
+                                    contentColor = onContainerColor
+                                )
                             }
                         }
                     }

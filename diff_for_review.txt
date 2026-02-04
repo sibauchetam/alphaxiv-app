@@ -1,0 +1,2673 @@
+diff --git a/app/build.gradle b/app/build.gradle
+index 118a646..7141389 100644
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -1,13 +1,15 @@
+ plugins {
++    id "app.cash.paparazzi"
+     id "com.android.application"
+     id "org.jetbrains.kotlin.android"
++    id "org.jetbrains.kotlin.plugin.compose"
+     id "com.google.dagger.hilt.android"
+     id "kotlin-kapt"
+ }
+
+ android {
+     namespace "org.alphaxiv.app"
+-    compileSdk 34
++    compileSdk 35
+
+     defaultConfig {
+         applicationId "org.alphaxiv.app"
+@@ -38,9 +40,7 @@ android {
+     buildFeatures {
+         compose true
+     }
+-    composeOptions {
+-        kotlinCompilerExtensionVersion "1.5.10"
+-    }
++
+     packaging {
+         resources {
+             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+@@ -56,7 +56,8 @@ dependencies {
+     implementation "androidx.compose.ui:ui"
+     implementation "androidx.compose.ui:ui-graphics"
+     implementation "androidx.compose.ui:ui-tooling-preview"
+-    implementation "androidx.compose.material3:material3:1.3.1"
++    implementation "androidx.compose.material3:material3:1.5.0-alpha13"
++    implementation "androidx.core:core-splashscreen:1.0.1"
+     implementation "androidx.compose.material:material-icons-extended"
+
+     // Hilt
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 89dd066..92c3fa0 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -13,13 +13,13 @@
+         android:label="@string/app_name"
+         android:roundIcon="@mipmap/ic_launcher_round"
+         android:supportsRtl="true"
+-        android:theme="@style/Theme.AlphaXiv"
++        android:theme="@style/Theme.AlphaXiv.Starting"
+         tools:targetApi="31">
+         <activity
+             android:name=".MainActivity"
+             android:exported="true"
+             android:label="@string/app_name"
+-            android:theme="@style/Theme.AlphaXiv">
++            android:theme="@style/Theme.AlphaXiv.Starting">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.LAUNCHER" />
+diff --git a/app/src/main/java/org/alphaxiv/app/MainActivity.kt b/app/src/main/java/org/alphaxiv/app/MainActivity.kt
+index 2749c28..6053629 100644
+--- a/app/src/main/java/org/alphaxiv/app/MainActivity.kt
++++ b/app/src/main/java/org/alphaxiv/app/MainActivity.kt
+@@ -4,22 +4,29 @@ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
+ import androidx.activity.enableEdgeToEdge
+-import androidx.compose.foundation.layout.fillMaxSize
+-import androidx.compose.foundation.layout.padding
+-import androidx.compose.runtime.Composable
+-import androidx.compose.ui.Modifier
++import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+ import dagger.hilt.android.AndroidEntryPoint
+ import org.alphaxiv.app.ui.MainScreen
+ import org.alphaxiv.app.ui.theme.AlphaXivTheme
++import androidx.compose.runtime.LaunchedEffect
+
+ @AndroidEntryPoint
+ class MainActivity : ComponentActivity() {
++    private var isReady = false
++
+     override fun onCreate(savedInstanceState: Bundle?) {
++        val splashScreen = installSplashScreen()
+         super.onCreate(savedInstanceState)
++
++        splashScreen.setKeepOnScreenCondition { !isReady }
++
+         enableEdgeToEdge()
+         setContent {
+             AlphaXivTheme {
+                 MainScreen()
++                LaunchedEffect(Unit) {
++                    isReady = true
++                }
+             }
+         }
+     }
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/MainScreen.kt b/app/src/main/java/org/alphaxiv/app/ui/MainScreen.kt
+index 61e5eb7..f0cc1d8 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/MainScreen.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/MainScreen.kt
+@@ -1,6 +1,7 @@
+ package org.alphaxiv.app.ui
+
+-import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.*
++import androidx.compose.ui.Alignment
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Bookmark
+ import androidx.compose.material.icons.filled.Explore
+@@ -8,7 +9,7 @@ import androidx.compose.material.icons.filled.Search
+ import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Modifier
+-import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.navigation.NavType
+ import androidx.navigation.compose.NavHost
+@@ -20,15 +21,12 @@ import org.alphaxiv.app.ui.screens.blog.BlogScreen
+ import org.alphaxiv.app.ui.screens.bookmarks.BookmarksScreen
+ import org.alphaxiv.app.ui.screens.details.DetailScreen
+ import org.alphaxiv.app.ui.screens.feed.FeedScreen
+-import org.alphaxiv.app.ui.screens.search.SearchScreen
+
+ sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+     data object Feed : Screen("feed", "Explore", Icons.Default.Explore)
+-    data object Search : Screen("search", "Search", Icons.Default.Search)
+     data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
+ }
+
+-@OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+ fun MainScreen() {
+     val navController = rememberNavController()
+@@ -36,97 +34,103 @@ fun MainScreen() {
+     val currentRoute = navBackStackEntry?.destination?.route
+
+     Scaffold(
+-        topBar = {
+-            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
+-                val title = when (currentRoute) {
+-                    Screen.Feed.route -> "Explore"
+-                    Screen.Search.route -> "Search"
+-                    Screen.Bookmarks.route -> "Bookmarks"
+-                    else -> "alphaXiv"
++        containerColor = MaterialTheme.colorScheme.background
++    ) { innerPadding ->
++        Box(modifier = Modifier.fillMaxSize()) {
++            NavHost(
++                navController = navController,
++                startDestination = Screen.Feed.route,
++                modifier = Modifier.padding(bottom = if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) 0.dp else innerPadding.calculateBottomPadding())
++            ) {
++                composable(Screen.Feed.route) {
++                    FeedScreen(
++                        viewModel = hiltViewModel(),
++                        onPaperClick = { id -> navController.navigate("details/$id") },
++                    )
+                 }
+-                TopAppBar(
+-                    title = {
+-                        Text(
+-                            text = title,
+-                            style = MaterialTheme.typography.headlineMedium,
+-                            fontWeight = FontWeight.Bold
+-                        )
+-                    },
+-                    colors = TopAppBarDefaults.topAppBarColors(
+-                        containerColor = MaterialTheme.colorScheme.background,
+-                        titleContentColor = MaterialTheme.colorScheme.primary
++                composable(Screen.Bookmarks.route) {
++                    BookmarksScreen(
++                        viewModel = hiltViewModel(),
++                        onPaperClick = { id -> navController.navigate("details/$id") }
+                     )
+-                )
++                }
++                composable(
++                    route = "details/{paperId}",
++                    arguments = listOf(navArgument("paperId") { type = NavType.StringType })
++                ) { backStackEntry ->
++                    val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
++                    DetailScreen(
++                        id = paperId,
++                        viewModel = hiltViewModel(),
++                        onBack = { navController.popBackStack() },
++                        onViewBlog = { navController.navigate("blog/$paperId") }
++                    )
++                }
++                composable(
++                    route = "blog/{paperId}",
++                    arguments = listOf(navArgument("paperId") { type = NavType.StringType })
++                ) { backStackEntry ->
++                    val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
++                    BlogScreen(
++                        id = paperId,
++                        viewModel = hiltViewModel(),
++                        onBack = { navController.popBackStack() }
++                    )
++                }
+             }
+-        },
+-        bottomBar = {
+-            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
+-                NavigationBar {
+-                    val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
+-                    items.forEach { screen ->
+-                        NavigationBarItem(
+-                            icon = { Icon(screen.icon, contentDescription = screen.label) },
+-                            label = { Text(screen.label) },
+-                            selected = currentRoute == screen.route,
+-                            onClick = {
+-                                navController.navigate(screen.route) {
+-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+-                                    launchSingleTop = true
+-                                    restoreState = true
++
++                        // Expressive Floating Bottom Bar
++            if (currentRoute in listOf(Screen.Feed.route, Screen.Bookmarks.route)) {
++                Surface(
++                    modifier = Modifier
++                        .align(Alignment.BottomCenter)
++                        .padding(horizontal = 24.dp, vertical = 24.dp)
++                        .widthIn(max = 400.dp)
++                        .fillMaxWidth()
++                        .height(72.dp),
++                    shape = MaterialTheme.shapes.extraLarge,
++                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
++                    tonalElevation = 8.dp,
++                    shadowElevation = 12.dp
++                ) {
++                    Row(
++                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
++                        horizontalArrangement = Arrangement.SpaceEvenly,
++                        verticalAlignment = Alignment.CenterVertically
++                    ) {
++                        val items = listOf(Screen.Feed, Screen.Bookmarks)
++                        items.forEach { screen ->
++                            val isSelected = currentRoute == screen.route
++                            Box(contentAlignment = Alignment.Center) {
++                                if (isSelected) {
++                                    Surface(
++                                        modifier = Modifier.size(width = 64.dp, height = 40.dp),
++                                        color = MaterialTheme.colorScheme.primaryContainer,
++                                        shape = MaterialTheme.shapes.large
++                                    ) {}
++                                }
++                                IconButton(
++                                    onClick = {
++                                        navController.navigate(screen.route) {
++                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
++                                            launchSingleTop = true
++                                            restoreState = true
++                                        }
++                                    },
++                                    modifier = Modifier.size(48.dp)
++                                ) {
++                                    Icon(
++                                        imageVector = screen.icon,
++                                        contentDescription = screen.label,
++                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
++                                        modifier = Modifier.size(24.dp)
++                                    )
+                                 }
+                             }
+-                        )
++                        }
+                     }
+                 }
+             }
+-        }
+-    ) { innerPadding ->
+-        NavHost(
+-            navController = navController,
+-            startDestination = Screen.Feed.route,
+-            modifier = Modifier.padding(innerPadding)
+-        ) {
+-            composable(Screen.Feed.route) {
+-                FeedScreen(
+-                    viewModel = hiltViewModel(),
+-                    onPaperClick = { id -> navController.navigate("details/$id") }
+-                )
+-            }
+-            composable(Screen.Search.route) {
+-                SearchScreen(
+-                    viewModel = hiltViewModel(),
+-                    onPaperClick = { id -> navController.navigate("details/$id") }
+-                )
+-            }
+-            composable(Screen.Bookmarks.route) {
+-                BookmarksScreen(
+-                    viewModel = hiltViewModel(),
+-                    onPaperClick = { id -> navController.navigate("details/$id") }
+-                )
+-            }
+-            composable(
+-                route = "details/{paperId}",
+-                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+-            ) { backStackEntry ->
+-                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+-                DetailScreen(
+-                    id = paperId,
+-                    viewModel = hiltViewModel(),
+-                    onBack = { navController.popBackStack() },
+-                    onViewBlog = { navController.navigate("blog/$paperId") }
+-                )
+-            }
+-            composable(
+-                route = "blog/{paperId}",
+-                arguments = listOf(navArgument("paperId") { type = NavType.StringType })
+-            ) { backStackEntry ->
+-                val paperId = backStackEntry.arguments?.getString("paperId") ?: ""
+-                BlogScreen(
+-                    id = paperId,
+-                    viewModel = hiltViewModel(),
+-                    onBack = { navController.popBackStack() }
+-                )
+-            }
+-        }
+     }
+-}
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/blog/BlogScreen.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/blog/BlogScreen.kt
+index ed80ff7..8e49cea 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/blog/BlogScreen.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/screens/blog/BlogScreen.kt
+@@ -7,13 +7,16 @@ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.filled.Language
+ import androidx.compose.material3.*
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.input.nestedscroll.nestedScroll
++import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import org.alphaxiv.app.ui.components.LatexMarkdownText
+
+-@OptIn(ExperimentalMaterial3Api::class)
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ fun BlogScreen(
+     id: String,
+@@ -27,6 +30,7 @@ fun BlogScreen(
+     val uiState by viewModel.uiState.collectAsState()
+     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+     var showLanguageMenu by remember { mutableStateOf(false) }
++    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+     val languages = listOf(
+         "en" to "English",
+@@ -41,9 +45,11 @@ fun BlogScreen(
+     )
+
+     Scaffold(
++        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
++        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+         topBar = {
+             TopAppBar(
+-                title = { Text("Blog") },
++                title = { Text("Discussion", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                 navigationIcon = {
+                     IconButton(onClick = onBack) {
+                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+@@ -73,15 +79,17 @@ fun BlogScreen(
+                             )
+                         }
+                     }
+-                }
++                },
++                scrollBehavior = scrollBehavior,
++                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+             )
+         }
+     ) { innerPadding ->
+-        Box(modifier = Modifier.padding(innerPadding)) {
++        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+             when (val state = uiState) {
+                 is BlogUiState.Loading -> {
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                        CircularProgressIndicator()
++                        CircularWavyProgressIndicator()
+                     }
+                 }
+                 is BlogUiState.Success -> {
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/bookmarks/BookmarksScreen.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/bookmarks/BookmarksScreen.kt
+index 35a4fe5..a9ae62d 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/bookmarks/BookmarksScreen.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/screens/bookmarks/BookmarksScreen.kt
+@@ -2,18 +2,22 @@ package org.alphaxiv.app.ui.screens.bookmarks
+
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.material3.*
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.dp
+
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.lazy.itemsIndexed
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.collectAsState
+ import androidx.compose.runtime.getValue
++import androidx.compose.ui.input.nestedscroll.nestedScroll
++import androidx.compose.ui.text.font.FontWeight
+ import org.alphaxiv.app.ui.screens.feed.PaperCard
+
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ fun BookmarksScreen(
+     viewModel: BookmarkViewModel,
+@@ -24,35 +28,71 @@ fun BookmarksScreen(
+     }
+
+     val uiState by viewModel.uiState.collectAsState()
++    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+-        Text(text = "Your Bookmarks", style = MaterialTheme.typography.headlineMedium)
+-        Spacer(modifier = Modifier.height(16.dp))
+-
+-        when (val state = uiState) {
+-            is BookmarkUiState.Loading -> {
+-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                    CircularProgressIndicator()
+-                }
+-            }
+-            is BookmarkUiState.Success -> {
+-                if (state.papers.isEmpty()) {
++    Scaffold(
++        containerColor = MaterialTheme.colorScheme.background,
++        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
++        topBar = {
++            TopAppBar(
++                title = { Text("Bookmarks", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black) },
++                scrollBehavior = scrollBehavior,
++                colors = TopAppBarDefaults.topAppBarColors(
++                    containerColor = MaterialTheme.colorScheme.background,
++                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
++                )
++            )
++        }
++    ) { innerPadding ->
++        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
++            when (val state = uiState) {
++                is BookmarkUiState.Loading -> {
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                        Text(text = "No bookmarks yet", style = MaterialTheme.typography.bodyLarge)
++                        CircularWavyProgressIndicator()
+                     }
+-                } else {
+-                    LazyColumn(
+-                        modifier = Modifier.fillMaxSize(),
+-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+-                    ) {
+-                        items(state.papers, key = { it.id }) { paper ->
+-                            PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
++                }
++                is BookmarkUiState.Success -> {
++                    if (state.papers.isEmpty()) {
++                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                            Text(
++                                text = "No saved papers",
++                                style = MaterialTheme.typography.bodyLarge,
++                                color = MaterialTheme.colorScheme.outline
++                            )
++                        }
++                    } else {
++                        LazyColumn(
++                            modifier = Modifier.fillMaxSize(),
++                            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
++                            verticalArrangement = Arrangement.spacedBy(16.dp)
++                        ) {
++                            itemsIndexed(state.papers, key = { _, paper -> paper.id }) { index, paper ->
++                                val containerColor = when (index % 4) {
++                                    0 -> MaterialTheme.colorScheme.tertiaryContainer
++                                    1 -> MaterialTheme.colorScheme.secondaryContainer
++                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
++                                }
++                                val onContainerColor = when (index % 4) {
++                                    0 -> MaterialTheme.colorScheme.onTertiaryContainer
++                                    1 -> MaterialTheme.colorScheme.onSecondaryContainer
++                                    else -> MaterialTheme.colorScheme.onSurface
++                                }
++
++                                PaperCard(
++                                    paper = paper,
++                                    onClick = { onPaperClick(paper.id) },
++                                    containerColor = containerColor,
++                                    contentColor = onContainerColor
++                                )
++                            }
+                         }
+                     }
+                 }
+-            }
+-            is BookmarkUiState.Error -> {
+-                Text(text = state.message, color = MaterialTheme.colorScheme.error)
++                is BookmarkUiState.Error -> {
++                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
++                    }
++                }
+             }
+         }
+     }
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/details/DetailScreen.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/details/DetailScreen.kt
+index e572073..73a7727 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/details/DetailScreen.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/screens/details/DetailScreen.kt
+@@ -1,5 +1,6 @@
+ package org.alphaxiv.app.ui.screens.details
+
++import androidx.compose.animation.animateContentSize
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+@@ -7,6 +8,7 @@ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.filled.Bookmark
+ import androidx.compose.material.icons.filled.BookmarkBorder
++import androidx.compose.material.icons.filled.Description
+ import androidx.compose.material.icons.filled.Share
+ import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+@@ -15,14 +17,17 @@ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import android.content.Intent
+ import android.net.Uri
++import androidx.compose.ui.input.nestedscroll.nestedScroll
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
+ import coil.compose.AsyncImage
+ import org.alphaxiv.app.data.model.Paper
+
+-@OptIn(ExperimentalMaterial3Api::class)
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ fun DetailScreen(
+     id: String,
+@@ -30,16 +35,27 @@ fun DetailScreen(
+     onBack: () -> Unit,
+     onViewBlog: () -> Unit
+ ) {
++    val context = LocalContext.current
+     LaunchedEffect(id) {
+         viewModel.loadPaper(id)
+     }
+
+     val uiState by viewModel.uiState.collectAsState()
++    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+     Scaffold(
++        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+         topBar = {
+             TopAppBar(
+-                title = { Text("Paper Details") },
++                title = {
++                    Text(
++                        text = if (uiState is DetailUiState.Success) (uiState as DetailUiState.Success).paper.title else "Paper Details",
++                        maxLines = 1,
++                        overflow = TextOverflow.Ellipsis,
++                        style = MaterialTheme.typography.titleLarge,
++                        fontWeight = FontWeight.Bold
++                    )
++                },
+                 navigationIcon = {
+                     IconButton(onClick = onBack) {
+                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+@@ -55,7 +71,6 @@ fun DetailScreen(
+                             )
+                         }
+                     }
+-                    val context = LocalContext.current
+                     IconButton(onClick = {
+                         if (state is DetailUiState.Success) {
+                             val sendIntent: Intent = Intent().apply {
+@@ -69,15 +84,39 @@ fun DetailScreen(
+                     }) {
+                         Icon(Icons.Default.Share, contentDescription = "Share")
+                     }
+-                }
++                },
++                scrollBehavior = scrollBehavior,
++                colors = TopAppBarDefaults.topAppBarColors(
++                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
++                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
++                    titleContentColor = MaterialTheme.colorScheme.onSurface
++                )
+             )
+-        }
++        },
++        floatingActionButton = {
++            if (uiState is DetailUiState.Success) {
++                val paper = (uiState as DetailUiState.Success).paper
++                ExtendedFloatingActionButton(
++                    text = { Text("Read Paper", fontWeight = FontWeight.Bold) },
++                    icon = { Icon(Icons.Default.Description, contentDescription = null) },
++                    onClick = {
++                        val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
++                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
++                        context.startActivity(intent)
++                    },
++                    containerColor = MaterialTheme.colorScheme.primary,
++                    contentColor = MaterialTheme.colorScheme.onPrimary,
++                    shape = MaterialTheme.shapes.large
++                )
++            }
++        },
++        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+     ) { innerPadding ->
+         Box(modifier = Modifier.padding(innerPadding)) {
+             when (val state = uiState) {
+                 is DetailUiState.Loading -> {
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                        CircularProgressIndicator()
++                        CircularWavyProgressIndicator()
+                     }
+                 }
+                 is DetailUiState.Success -> {
+@@ -87,64 +126,76 @@ fun DetailScreen(
+                             .fillMaxSize()
+                             .verticalScroll(rememberScrollState())
+                             .padding(16.dp)
++                            .animateContentSize()
+                     ) {
+-                        if (paper.thumbnailUrl != null) {
+-                            AsyncImage(
+-                                model = paper.thumbnailUrl,
+-                                contentDescription = null,
+-                                modifier = Modifier
+-                                    .fillMaxWidth()
+-                                    .height(250.dp)
+-                                    .clip(MaterialTheme.shapes.extraLarge),
+-                                contentScale = ContentScale.Crop
+-                            )
+-                            Spacer(modifier = Modifier.height(16.dp))
+-                        }
+                         Text(
+                             text = paper.title,
+-                            style = MaterialTheme.typography.headlineMedium,
+-                            fontWeight = FontWeight.Bold
++                            style = MaterialTheme.typography.headlineSmall,
++                            fontWeight = FontWeight.ExtraBold,
++                            color = MaterialTheme.colorScheme.onSurface,
++                            lineHeight = 32.sp
+                         )
+-                        Spacer(modifier = Modifier.height(8.dp))
++                        Spacer(modifier = Modifier.height(12.dp))
+                         Text(
+                             text = paper.authors.joinToString(", "),
+-                            style = MaterialTheme.typography.titleMedium,
+-                            color = MaterialTheme.colorScheme.secondary
+-                        )
+-                        Spacer(modifier = Modifier.height(16.dp))
+-                        HorizontalDivider()
+-                        Spacer(modifier = Modifier.height(16.dp))
+-                        Text(
+-                            text = "Abstract",
+-                            style = MaterialTheme.typography.titleLarge,
++                            style = MaterialTheme.typography.titleSmall,
++                            color = MaterialTheme.colorScheme.primary,
+                             fontWeight = FontWeight.Bold
+                         )
+-                        Spacer(modifier = Modifier.height(8.dp))
+-                        Text(
+-                            text = paper.summary,
+-                            style = MaterialTheme.typography.bodyLarge
+-                        )
+-                        Spacer(modifier = Modifier.height(24.dp))
+-                        val context = LocalContext.current
+-                        Button(
+-                            onClick = {
+-                                val pdfUrl = "https://www.alphaxiv.org/pdf/${paper.id}.pdf"
+-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+-                                context.startActivity(intent)
+-                            },
++                        Spacer(modifier = Modifier.height(16.dp))
++
++                        if (paper.thumbnailUrl != null) {
++                            Card(
++                                shape = MaterialTheme.shapes.large,
++                                modifier = Modifier.fillMaxWidth()
++                            ) {
++                                AsyncImage(
++                                    model = paper.thumbnailUrl,
++                                    contentDescription = null,
++                                    modifier = Modifier
++                                        .fillMaxWidth()
++                                        .height(240.dp),
++                                    contentScale = ContentScale.Crop
++                                )
++                            }
++                            Spacer(modifier = Modifier.height(24.dp))
++                        }
++
++                        Surface(
++                            color = MaterialTheme.colorScheme.surface,
++                            shape = MaterialTheme.shapes.large,
+                             modifier = Modifier.fillMaxWidth(),
+-                            shape = MaterialTheme.shapes.extraLarge
++                            tonalElevation = 1.dp
+                         ) {
+-                            Text("View PDF")
++                            Column(modifier = Modifier.padding(20.dp)) {
++                                Text(
++                                    text = "Abstract",
++                                    style = MaterialTheme.typography.labelLarge,
++                                    fontWeight = FontWeight.Black,
++                                    color = MaterialTheme.colorScheme.primary,
++                                    letterSpacing = 1.sp
++                                )
++                                Spacer(modifier = Modifier.height(12.dp))
++                                Text(
++                                    text = paper.summary,
++                                    style = MaterialTheme.typography.bodyLarge,
++                                    lineHeight = 26.sp,
++                                    color = MaterialTheme.colorScheme.onSurface
++                                )
++                            }
+                         }
+-                        Spacer(modifier = Modifier.height(8.dp))
++
++                        Spacer(modifier = Modifier.height(24.dp))
+                         OutlinedButton(
+                             onClick = onViewBlog,
+                             modifier = Modifier.fillMaxWidth(),
+-                            shape = MaterialTheme.shapes.extraLarge
++                            shape = MaterialTheme.shapes.large,
++                            contentPadding = PaddingValues(16.dp)
+                         ) {
+-                            Text("View Blog")
++                            Text("View Blog & Discussion", fontWeight = FontWeight.Bold)
+                         }
++
++                        Spacer(modifier = Modifier.height(100.dp))
+                     }
+                 }
+                 is DetailUiState.Error -> {
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedScreen.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedScreen.kt
+index 840eb97..e569d09 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedScreen.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedScreen.kt
+@@ -1,13 +1,16 @@
+ package org.alphaxiv.app.ui.screens.feed
+
++import androidx.compose.animation.*
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.LazyRow
+ import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.lazy.itemsIndexed
+ import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.ChatBubbleOutline
+-import androidx.compose.material.icons.filled.ThumbUp
++import androidx.compose.material.icons.filled.*
++import androidx.compose.material.icons.automirrored.filled.Sort
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material3.*
+ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+ import androidx.compose.runtime.*
+@@ -15,6 +18,8 @@ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.RectangleShape
++import androidx.compose.ui.input.nestedscroll.nestedScroll
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.text.font.FontWeight
+@@ -25,54 +30,219 @@ import coil.compose.AsyncImage
+ import coil.request.ImageRequest
+ import org.alphaxiv.app.data.model.Paper
+
+-@OptIn(ExperimentalMaterial3Api::class)
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ fun FeedScreen(
+     viewModel: FeedViewModel,
+     onPaperClick: (String) -> Unit
+ ) {
+     val uiState by viewModel.uiState.collectAsState()
++    val searchState by viewModel.searchState.collectAsState()
++
++    var searchQuery by remember { mutableStateOf("") }
++    var searchActive by remember { mutableStateOf(false) }
++
+     var selectedSort by remember { mutableStateOf("Hot") }
++    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+-    Column(modifier = Modifier.fillMaxSize()) {
+-        SortSelector(
+-            selectedSort = selectedSort,
+-            onSortSelected = {
+-                selectedSort = it
+-                viewModel.loadFeed(it)
++    Scaffold(
++        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
++        topBar = {
++            Column(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .windowInsetsPadding(WindowInsets.statusBars)
++                    .background(if (searchActive) MaterialTheme.colorScheme.surface else Color.Transparent)
++            ) {
++                SearchBar(
++                    modifier = Modifier
++                        .align(Alignment.CenterHorizontally)
++                        .padding(horizontal = if (searchActive) 0.dp else 16.dp, vertical = 8.dp)
++                        .animateContentSize(),
++                    inputField = {
++                        SearchBarDefaults.InputField(
++                            query = searchQuery,
++                            onQueryChange = {
++                                searchQuery = it
++                                viewModel.search(it)
++                            },
++                            onSearch = { viewModel.search(it) },
++                            expanded = searchActive,
++                            onExpandedChange = { searchActive = it },
++                            placeholder = { Text("Search papers...") },
++                            leadingIcon = {
++                                if (searchActive) {
++                                    IconButton(onClick = {
++                                        searchActive = false
++                                        searchQuery = ""
++                                        viewModel.clearSearch()
++                                    }) {
++                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
++                                    }
++                                } else {
++                                    Icon(Icons.Default.Search, contentDescription = "Search")
++                                }
++                            },
++                            trailingIcon = {
++                                if (searchActive && searchQuery.isNotEmpty()) {
++                                    IconButton(onClick = {
++                                        searchQuery = ""
++                                        viewModel.clearSearch()
++                                    }) {
++                                        Icon(Icons.Default.Close, contentDescription = "Clear")
++                                    }
++                                }
++                            }
++                        )
++                    },
++                    expanded = searchActive,
++                    onExpandedChange = { searchActive = it },
++                    colors = SearchBarDefaults.colors(
++                        containerColor = if (searchActive) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainerHigh
++                    ),
++                    shape = if (searchActive) RectangleShape else MaterialTheme.shapes.extraLarge,
++                    tonalElevation = if (searchActive) 0.dp else 6.dp,
++                    shadowElevation = if (searchActive) 0.dp else 8.dp
++                ) {
++                    // Search results content
++                    Box(modifier = Modifier.fillMaxSize()) {
++                        when (val state = searchState) {
++                            is SearchUiState.Loading -> {
++                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                                    CircularWavyProgressIndicator()
++                                }
++                            }
++                            is SearchUiState.Success -> {
++                                LazyColumn(
++                                    modifier = Modifier.fillMaxSize(),
++                                    contentPadding = PaddingValues(16.dp),
++                                    verticalArrangement = Arrangement.spacedBy(16.dp)
++                                ) {
++                                    items(state.results, key = { it.id }) { paper ->
++                                        PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
++                                    }
++                                }
++                            }
++                            is SearchUiState.Error -> {
++                                Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
++                                    Text(state.message, color = MaterialTheme.colorScheme.error)
++                                }
++                            }
++                            is SearchUiState.Idle -> {
++                                if (searchQuery.isEmpty()) {
++                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                                        Text("Type to search papers", color = MaterialTheme.colorScheme.onSurfaceVariant)
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++
++                if (!searchActive) {
++                    Row(
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .padding(horizontal = 20.dp, vertical = 8.dp),
++                        verticalAlignment = Alignment.CenterVertically,
++                        horizontalArrangement = Arrangement.SpaceBetween
++                    ) {
++                        IconButton(onClick = { /* Menu */ }) {
++                            Icon(Icons.Default.Menu, contentDescription = "Menu")
++                        }
++                        Text(
++                            text = "alphaXiv",
++                            style = MaterialTheme.typography.titleLarge,
++                            fontWeight = FontWeight.ExtraBold,
++                            color = MaterialTheme.colorScheme.primary
++                        )
++                        IconButton(onClick = { /* Random */ }) {
++                            Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
++                        }
++                    }
++                }
+             }
+-        )
++        },
++        containerColor = MaterialTheme.colorScheme.background
++    ) { innerPadding ->
++        val uiStateValue = uiState
++        val isLoading = uiStateValue is FeedUiState.Loading
++        val papers = (uiStateValue as? FeedUiState.Success)?.papers ?: emptyList()
+
+         PullToRefreshBox(
+-            isRefreshing = uiState is FeedUiState.Loading,
++            isRefreshing = isLoading && papers.isNotEmpty(),
+             onRefresh = { viewModel.loadFeed(selectedSort) },
+-            modifier = Modifier.fillMaxSize()
++            modifier = Modifier.padding(innerPadding).fillMaxSize()
+         ) {
+-            when (val state = uiState) {
+-                is FeedUiState.Loading -> {
+-                    if ((uiState as? FeedUiState.Success)?.papers?.isEmpty() != false) {
+-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                            CircularProgressIndicator()
+-                        }
+-                    }
++            if (isLoading && papers.isEmpty()) {
++                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                    CircularWavyProgressIndicator()
+                 }
+-                is FeedUiState.Success -> {
+-                    LazyColumn(
+-                        modifier = Modifier.fillMaxSize(),
+-                        contentPadding = PaddingValues(16.dp),
+-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+-                    ) {
+-                        items(state.papers, key = { it.id }) { paper ->
+-                            PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
++            } else {
++                LazyColumn(
++                    modifier = Modifier.fillMaxSize(),
++                    contentPadding = PaddingValues(bottom = 100.dp),
++                    verticalArrangement = Arrangement.spacedBy(20.dp)
++                ) {
++                    item {
++                        Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
++                            Text(
++                                text = "Popular Papers",
++                                style = MaterialTheme.typography.displaySmall,
++                                fontWeight = FontWeight.Black,
++                                color = MaterialTheme.colorScheme.onSurface
++                            )
++                            Text(
++                                text = "Trending research discussed today",
++                                style = MaterialTheme.typography.bodyLarge,
++                                color = MaterialTheme.colorScheme.onSurfaceVariant
++                            )
++
++                            Spacer(modifier = Modifier.height(16.dp))
++
++                            SortSelector(
++                                selectedSort = selectedSort,
++                                onSortSelected = {
++                                    selectedSort = it
++                                    viewModel.loadFeed(it)
++                                }
++                            )
+                         }
+                     }
+-                }
+-                is FeedUiState.Error -> {
+-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
++
++                    if (uiStateValue is FeedUiState.Success) {
++                        itemsIndexed(papers, key = { _, paper -> paper.id }) { index, paper ->
++                            if (index == 0) {
++                                HeroPaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
++                            } else {
++                                // Alternating expressive colors
++                                val containerColor = when (index % 4) {
++                                    1 -> MaterialTheme.colorScheme.tertiaryContainer
++                                    2 -> MaterialTheme.colorScheme.secondaryContainer
++                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
++                                }
++                                val onContainerColor = when (index % 4) {
++                                    1 -> MaterialTheme.colorScheme.onTertiaryContainer
++                                    2 -> MaterialTheme.colorScheme.onSecondaryContainer
++                                    else -> MaterialTheme.colorScheme.onSurface
++                                }
++
++                                PaperCard(
++                                    paper = paper,
++                                    onClick = { onPaperClick(paper.id) },
++                                    containerColor = containerColor,
++                                    contentColor = onContainerColor
++                                )
++                            }
++                        }
++                    } else if (uiStateValue is FeedUiState.Error) {
++                        item {
++                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
++                                Text(uiStateValue.message, color = MaterialTheme.colorScheme.error)
++                            }
++                        }
+                     }
+                 }
+-                else -> {}
+             }
+         }
+     }
+@@ -85,62 +255,60 @@ fun SortSelector(
+     onSortSelected: (String) -> Unit
+ ) {
+     val options = listOf("Hot", "New", "Top")
+-    SingleChoiceSegmentedButtonRow(
+-        modifier = Modifier
+-            .fillMaxWidth()
+-            .padding(16.dp)
++    Row(
++        modifier = Modifier.padding(horizontal = 20.dp),
++        horizontalArrangement = Arrangement.spacedBy(8.dp)
+     ) {
+-        options.forEachIndexed { index, option ->
+-            SegmentedButton(
++        options.forEach { option ->
++            FilterChip(
+                 selected = selectedSort == option,
+                 onClick = { onSortSelected(option) },
+-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+-            ) {
+-                Text(option)
+-            }
++                label = { Text(option, fontWeight = FontWeight.Bold) },
++                shape = MaterialTheme.shapes.medium
++            )
+         }
+     }
+ }
+
+ @Composable
+-fun PaperCard(
++fun HeroPaperCard(
+     paper: Paper,
+     onClick: () -> Unit
+ ) {
+-    OutlinedCard(
++    Surface(
+         onClick = onClick,
+-        modifier = Modifier.fillMaxWidth(),
+-        shape = MaterialTheme.shapes.medium,
+-        colors = CardDefaults.outlinedCardColors(
+-            containerColor = MaterialTheme.colorScheme.surface
+-        )
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = 16.dp),
++        color = MaterialTheme.colorScheme.primaryContainer,
++        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
++        shape = MaterialTheme.shapes.extraLarge,
++        tonalElevation = 2.dp
+     ) {
+-        Column(modifier = Modifier.padding(16.dp)) {
+-            Row(modifier = Modifier.fillMaxWidth()) {
++        Column(modifier = Modifier.padding(24.dp)) {
++            Row(
++                modifier = Modifier.fillMaxWidth(),
++                horizontalArrangement = Arrangement.SpaceBetween,
++                verticalAlignment = Alignment.Top
++            ) {
+                 Column(modifier = Modifier.weight(1f)) {
+                     Text(
+-                        text = paper.title,
+-                        style = MaterialTheme.typography.titleLarge.copy(
+-                            fontSize = 18.sp,
+-                            lineHeight = 22.sp
+-                        ),
+-                        fontWeight = FontWeight.Bold,
+-                        color = MaterialTheme.colorScheme.onSurface,
+-                        maxLines = 3,
+-                        overflow = TextOverflow.Ellipsis
++                        text = "FEATURED",
++                        style = MaterialTheme.typography.labelLarge,
++                        fontWeight = FontWeight.Black,
++                        color = MaterialTheme.colorScheme.primary
+                     )
+-                    Spacer(modifier = Modifier.height(4.dp))
++                    Spacer(modifier = Modifier.height(8.dp))
+                     Text(
+-                        text = paper.authors.joinToString(", "),
+-                        style = MaterialTheme.typography.bodySmall,
+-                        color = MaterialTheme.colorScheme.primary,
+-                        fontWeight = FontWeight.Medium,
+-                        maxLines = 1,
+-                        overflow = TextOverflow.Ellipsis
++                        text = paper.title,
++                        style = MaterialTheme.typography.headlineSmall,
++                        fontWeight = FontWeight.ExtraBold,
++                        lineHeight = 30.sp
+                     )
+                 }
++
+                 if (paper.thumbnailUrl != null) {
+-                    Spacer(modifier = Modifier.width(12.dp))
++                    Spacer(modifier = Modifier.width(16.dp))
+                     AsyncImage(
+                         model = ImageRequest.Builder(LocalContext.current)
+                             .data(paper.thumbnailUrl)
+@@ -148,91 +316,122 @@ fun PaperCard(
+                             .build(),
+                         contentDescription = null,
+                         modifier = Modifier
+-                            .size(80.dp, 104.dp)
+-                            .clip(MaterialTheme.shapes.small)
+-                            .background(MaterialTheme.colorScheme.surfaceVariant),
++                            .size(100.dp)
++                            .clip(MaterialTheme.shapes.large),
+                         contentScale = ContentScale.Crop
+                     )
+                 }
+             }
+-
+-            if (paper.categories.isNotEmpty()) {
+-                Spacer(modifier = Modifier.height(8.dp))
+-                LazyRow(
+-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+-                    modifier = Modifier.fillMaxWidth()
+-                ) {
+-                    items(paper.categories) { category ->
+-                        Surface(
+-                            shape = MaterialTheme.shapes.extraSmall,
+-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+-                            contentColor = MaterialTheme.colorScheme.primary
+-                        ) {
+-                            Text(
+-                                text = "#$category",
+-                                style = MaterialTheme.typography.labelSmall,
+-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+-                            )
+-                        }
+-                    }
+-                }
+-            }
+-
+-            Spacer(modifier = Modifier.height(12.dp))
++
++            Spacer(modifier = Modifier.height(16.dp))
++
+             Text(
+                 text = paper.summary,
+-                style = MaterialTheme.typography.bodyMedium,
+-                color = MaterialTheme.colorScheme.onSurfaceVariant,
++                style = MaterialTheme.typography.bodyLarge,
+                 maxLines = 3,
+-                overflow = TextOverflow.Ellipsis
++                overflow = TextOverflow.Ellipsis,
++                lineHeight = 22.sp
+             )
++
++            Spacer(modifier = Modifier.height(20.dp))
++
++            Row(verticalAlignment = Alignment.CenterVertically) {
++                Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(18.dp))
++                Spacer(modifier = Modifier.width(6.dp))
++                Text(text = "${paper.upvoteCount}", fontWeight = FontWeight.Bold)
++                Spacer(modifier = Modifier.width(16.dp))
++                Icon(Icons.Default.Comment, contentDescription = null, modifier = Modifier.size(18.dp))
++                Spacer(modifier = Modifier.width(6.dp))
++                Text(text = "${paper.commentCount}", fontWeight = FontWeight.Bold)
++            }
++        }
++    }
++}
+
+-            Spacer(modifier = Modifier.height(16.dp))
+-            Row(
+-                verticalAlignment = Alignment.CenterVertically,
+-                modifier = Modifier.fillMaxWidth()
+-            ) {
+-                Icon(
+-                    imageVector = Icons.Default.ThumbUp,
+-                    contentDescription = null,
+-                    modifier = Modifier.size(18.dp),
+-                    tint = MaterialTheme.colorScheme.primary
+-                )
++@Composable
++fun PaperCard(
++    paper: Paper,
++    onClick: () -> Unit,
++    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
++    contentColor: Color = MaterialTheme.colorScheme.onSurface
++) {
++    Surface(
++        onClick = onClick,
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = 16.dp),
++        color = containerColor,
++        contentColor = contentColor,
++        shape = MaterialTheme.shapes.large,
++        tonalElevation = 1.dp
++    ) {
++        Row(
++            modifier = Modifier.padding(16.dp),
++            horizontalArrangement = Arrangement.spacedBy(16.dp)
++        ) {
++            Column(modifier = Modifier.weight(1f)) {
+                 Text(
+-                    text = " ${paper.upvoteCount}",
+-                    style = MaterialTheme.typography.labelMedium,
+-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+-                )
+-                Spacer(modifier = Modifier.width(20.dp))
+-                Icon(
+-                    imageVector = Icons.Default.ChatBubbleOutline,
+-                    contentDescription = null,
+-                    modifier = Modifier.size(18.dp),
+-                    tint = MaterialTheme.colorScheme.outline
++                    text = paper.publishedDate,
++                    style = MaterialTheme.typography.labelSmall,
++                    fontWeight = FontWeight.Bold,
++                    color = contentColor.copy(alpha = 0.7f)
+                 )
++                Spacer(modifier = Modifier.height(4.dp))
+                 Text(
+-                    text = " ${paper.commentCount}",
+-                    style = MaterialTheme.typography.labelMedium,
+-                    color = MaterialTheme.colorScheme.onSurfaceVariant
++                    text = paper.title,
++                    style = MaterialTheme.typography.titleMedium,
++                    fontWeight = FontWeight.ExtraBold,
++                    maxLines = 3,
++                    overflow = TextOverflow.Ellipsis,
++                    lineHeight = 22.sp
+                 )
+-                Spacer(modifier = Modifier.weight(1f))
++                Spacer(modifier = Modifier.height(8.dp))
+                 Text(
+-                    text = paper.publishedDate,
+-                    style = MaterialTheme.typography.labelSmall,
+-                    color = MaterialTheme.colorScheme.outline
++                    text = paper.summary,
++                    style = MaterialTheme.typography.bodySmall,
++                    maxLines = 2,
++                    overflow = TextOverflow.Ellipsis,
++                    lineHeight = 18.sp,
++                    color = contentColor.copy(alpha = 0.8f)
++                )
++
++                Spacer(modifier = Modifier.height(12.dp))
++
++                Row(verticalAlignment = Alignment.CenterVertically) {
++                    Icon(
++                        imageVector = Icons.Default.ThumbUp,
++                        contentDescription = null,
++                        modifier = Modifier.size(14.dp)
++                    )
++                    Spacer(modifier = Modifier.width(4.dp))
++                    Text(
++                        text = "${paper.upvoteCount}",
++                        style = MaterialTheme.typography.labelSmall,
++                        fontWeight = FontWeight.Bold
++                    )
++                    Spacer(modifier = Modifier.width(12.dp))
++                    Text(
++                        text = "${paper.commentCount} comments",
++                        style = MaterialTheme.typography.labelSmall,
++                        color = contentColor.copy(alpha = 0.6f)
++                    )
++                }
++            }
++
++            if (paper.thumbnailUrl != null) {
++                AsyncImage(
++                    model = ImageRequest.Builder(LocalContext.current)
++                        .data(paper.thumbnailUrl)
++                        .crossfade(true)
++                        .build(),
++                    contentDescription = null,
++                    modifier = Modifier
++                        .size(80.dp)
++                        .clip(MaterialTheme.shapes.medium)
++                        .background(MaterialTheme.colorScheme.surfaceVariant),
++                    contentScale = ContentScale.Crop
+                 )
+             }
+         }
+     }
+ }
+-
+-// Extension to avoid error in the icon size
+-@Composable
+-fun Icon(imageVector: androidx.compose.ui.graphics.vector.ImageVector, contentDescription: String?, size: androidx.compose.ui.unit.Dp, tint: androidx.compose.ui.graphics.Color = androidx.compose.material3.LocalContentColor.current) {
+-    androidx.compose.material3.Icon(
+-        imageVector = imageVector,
+-        contentDescription = contentDescription,
+-        modifier = Modifier.size(size),
+-        tint = tint
+-    )
+-}
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedViewModel.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedViewModel.kt
+index 69e2c90..3ce78ef 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedViewModel.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/screens/feed/FeedViewModel.kt
+@@ -19,6 +19,9 @@ class FeedViewModel @Inject constructor(
+     private val _uiState = MutableStateFlow<FeedUiState>(FeedUiState.Loading)
+     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
+
++    private val _searchState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
++    val searchState: StateFlow<SearchUiState> = _searchState.asStateFlow()
++
+     init {
+         loadFeed("Hot")
+     }
+@@ -34,6 +37,26 @@ class FeedViewModel @Inject constructor(
+             }
+         }
+     }
++
++    fun search(query: String) {
++        if (query.isBlank()) {
++            _searchState.value = SearchUiState.Idle
++            return
++        }
++        viewModelScope.launch {
++            _searchState.value = SearchUiState.Loading
++            try {
++                val results = repository.searchPapers(query)
++                _searchState.value = SearchUiState.Success(results)
++            } catch (e: Exception) {
++                _searchState.value = SearchUiState.Error(e.message ?: "Unknown error")
++            }
++        }
++    }
++
++    fun clearSearch() {
++        _searchState.value = SearchUiState.Idle
++    }
+ }
+
+ sealed interface FeedUiState {
+@@ -41,3 +64,10 @@ sealed interface FeedUiState {
+     data class Success(val papers: List<Paper>) : FeedUiState
+     data class Error(val message: String) : FeedUiState
+ }
++
++sealed interface SearchUiState {
++    data object Idle : SearchUiState
++    data object Loading : SearchUiState
++    data class Success(val results: List<Paper>) : SearchUiState
++    data class Error(val message: String) : SearchUiState
++}
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/search/SearchScreen.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/search/SearchScreen.kt
+deleted file mode 100644
+index 124cb08..0000000
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/search/SearchScreen.kt
++++ /dev/null
+@@ -1,69 +0,0 @@
+-package org.alphaxiv.app.ui.screens.search
+-
+-import androidx.compose.foundation.layout.*
+-import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.Search
+-import androidx.compose.material3.*
+-import androidx.compose.runtime.*
+-import androidx.compose.ui.Alignment
+-import androidx.compose.ui.Modifier
+-import androidx.compose.ui.unit.dp
+-
+-import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.lazy.items
+-import org.alphaxiv.app.ui.screens.feed.PaperCard
+-
+-@OptIn(ExperimentalMaterial3Api::class)
+-@Composable
+-fun SearchScreen(
+-    viewModel: SearchViewModel,
+-    onPaperClick: (String) -> Unit
+-) {
+-    var query by remember { mutableStateOf("") }
+-    val uiState by viewModel.uiState.collectAsState()
+-
+-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+-        SearchBar(
+-            inputField = {
+-                SearchBarDefaults.InputField(
+-                    query = query,
+-                    onQueryChange = { query = it },
+-                    onSearch = { viewModel.search(query) },
+-                    expanded = false,
+-                    onExpandedChange = { },
+-                    placeholder = { Text("Search papers...") },
+-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+-                )
+-            },
+-            expanded = false,
+-            onExpandedChange = { },
+-            modifier = Modifier.fillMaxWidth()
+-        ) { }
+-
+-        Spacer(modifier = Modifier.height(16.dp))
+-
+-        when (val state = uiState) {
+-            is SearchUiState.Idle -> {
+-                Text(text = "Enter a query to search", style = MaterialTheme.typography.bodyMedium)
+-            }
+-            is SearchUiState.Loading -> {
+-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+-                    CircularProgressIndicator()
+-                }
+-            }
+-            is SearchUiState.Success -> {
+-                LazyColumn(
+-                    modifier = Modifier.fillMaxSize(),
+-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+-                ) {
+-                    items(state.results, key = { it.id }) { paper ->
+-                        PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
+-                    }
+-                }
+-            }
+-            is SearchUiState.Error -> {
+-                Text(text = state.message, color = MaterialTheme.colorScheme.error)
+-            }
+-        }
+-    }
+-}
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/screens/search/SearchViewModel.kt b/app/src/main/java/org/alphaxiv/app/ui/screens/search/SearchViewModel.kt
+deleted file mode 100644
+index fb6a618..0000000
+--- a/app/src/main/java/org/alphaxiv/app/ui/screens/search/SearchViewModel.kt
++++ /dev/null
+@@ -1,41 +0,0 @@
+-package org.alphaxiv.app.ui.screens.search
+-
+-import androidx.lifecycle.ViewModel
+-import androidx.lifecycle.viewModelScope
+-import dagger.hilt.android.lifecycle.HiltViewModel
+-import kotlinx.coroutines.flow.MutableStateFlow
+-import kotlinx.coroutines.flow.StateFlow
+-import kotlinx.coroutines.flow.asStateFlow
+-import kotlinx.coroutines.launch
+-import org.alphaxiv.app.data.model.Paper
+-import org.alphaxiv.app.data.repository.PaperRepository
+-import javax.inject.Inject
+-
+-@HiltViewModel
+-class SearchViewModel @Inject constructor(
+-    private val repository: PaperRepository
+-) : ViewModel() {
+-
+-    private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
+-    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+-
+-    fun search(query: String) {
+-        if (query.isBlank()) return
+-        viewModelScope.launch {
+-            _uiState.value = SearchUiState.Loading
+-            try {
+-                val results = repository.searchPapers(query)
+-                _uiState.value = SearchUiState.Success(results)
+-            } catch (e: Exception) {
+-                _uiState.value = SearchUiState.Error(e.message ?: "Unknown error")
+-            }
+-        }
+-    }
+-}
+-
+-sealed interface SearchUiState {
+-    data object Idle : SearchUiState
+-    data object Loading : SearchUiState
+-    data class Success(val results: List<Paper>) : SearchUiState
+-    data class Error(val message: String) : SearchUiState
+-}
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/theme/Color.kt b/app/src/main/java/org/alphaxiv/app/ui/theme/Color.kt
+index 93783d1..d9b11db 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/theme/Color.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/theme/Color.kt
+@@ -2,21 +2,89 @@ package org.alphaxiv.app.ui.theme
+
+ import androidx.compose.ui.graphics.Color
+
+-// alphaXiv Red palette
++// alphaXiv Red palette - Refined Material 3 Expressive
++val primaryLight = Color(0xFFB11818)
++val onPrimaryLight = Color(0xFFFFFFFF)
++val primaryContainerLight = Color(0xFFFFDAD5)
++val onPrimaryContainerLight = Color(0xFF410001)
++
++val secondaryLight = Color(0xFF775652)
++val onSecondaryLight = Color(0xFFFFFFFF)
++val secondaryContainerLight = Color(0xFFFFDAD5)
++val onSecondaryContainerLight = Color(0xFF2C1512)
++
++val tertiaryLight = Color(0xFF984900)
++val onTertiaryLight = Color(0xFFFFFFFF)
++val tertiaryContainerLight = Color(0xFFFFDCC5)
++val onTertiaryContainerLight = Color(0xFF311300)
++
++val errorLight = Color(0xFFBA1A1A)
++val onErrorLight = Color(0xFFFFFFFF)
++val errorContainerLight = Color(0xFFFFDAD6)
++val onErrorContainerLight = Color(0xFF410002)
++
++val backgroundLight = Color(0xFFFFF8F6)
++val onBackgroundLight = Color(0xFF231918)
++val surfaceLight = Color(0xFFFFF8F6)
++val onSurfaceLight = Color(0xFF231918)
++val surfaceVariantLight = Color(0xFFF5DDDA)
++val onSurfaceVariantLight = Color(0xFF534341)
++val outlineLight = Color(0xFF857371)
++val outlineVariantLight = Color(0xFFD8C2BF)
++val scrimLight = Color(0xFF000000)
++val inverseSurfaceLight = Color(0xFF392E2D)
++val inverseOnSurfaceLight = Color(0xFFFFEDEA)
++val inversePrimaryLight = Color(0xFFFFB4AA)
++
++val surfaceDimLight = Color(0xFFE8D6D4)
++val surfaceBrightLight = Color(0xFFFFF8F7)
++val surfaceContainerLowestLight = Color(0xFFFFFFFF)
++val surfaceContainerLowLight = Color(0xFFF7F2F1)
++val surfaceContainerLight = Color(0xFFF1EDEC)
++val surfaceContainerHighLight = Color(0xFFEBE7E6)
++val surfaceContainerHighestLight = Color(0xFFE5E1E0)
++
++// Dark Theme - More expressive and deep
++val primaryDark = Color(0xFFFFB4AA)
++val onPrimaryDark = Color(0xFF690004)
++val primaryContainerDark = Color(0xFF901413)
++val onPrimaryContainerDark = Color(0xFFFFDAD5)
++
++val secondaryDark = Color(0xFFE7BDB7)
++val onSecondaryDark = Color(0xFF442926)
++val secondaryContainerDark = Color(0xFF5D3F3B)
++val onSecondaryContainerDark = Color(0xFFFFDAD5)
++
++val tertiaryDark = Color(0xFFFFB784)
++val onTertiaryDark = Color(0xFF512400)
++val tertiaryContainerDark = Color(0xFF733600)
++val onTertiaryContainerDark = Color(0xFFFFDCC5)
++
++val errorDark = Color(0xFFFFB4AB)
++val onErrorDark = Color(0xFF690005)
++val errorContainerDark = Color(0xFF93000A)
++val onErrorContainerDark = Color(0xFFFFDAD6)
++
++val backgroundDark = Color(0xFF140C0B) // Deeper background
++val onBackgroundDark = Color(0xFFF1DEDC)
++val surfaceDark = Color(0xFF140C0B)
++val onSurfaceDark = Color(0xFFF1DEDC)
++val surfaceVariantDark = Color(0xFF534341)
++val onSurfaceVariantDark = Color(0xFFD8C2BF)
++val outlineDark = Color(0xFFA08C8A)
++val outlineVariantDark = Color(0xFF534341)
++val scrimDark = Color(0xFF000000)
++val inverseSurfaceDark = Color(0xFFF1DEDC)
++val inverseOnSurfaceDark = Color(0xFF392E2D)
++val inversePrimaryDark = Color(0xFFB12D23)
++
++val surfaceDimDark = Color(0xFF1A1110)
++val surfaceBrightDark = Color(0xFF423735)
++val surfaceContainerLowestDark = Color(0xFF0F0706)
++val surfaceContainerLowDark = Color(0xFF231918)
++val surfaceContainerDark = Color(0xFF271D1C)
++val surfaceContainerHighDark = Color(0xFF322726)
++val surfaceContainerHighestDark = Color(0xFF3D3231)
++
++// alphaXiv Specific Colors
+ val AlphaXivRed = Color(0xFFB11818)
+-val AlphaXivRedLight = Color(0xFFE57373)
+-val AlphaXivRedDark = Color(0xFF7F0000)
+-
+-// Professional grayscale
+-val DarkGray = Color(0xFF121212)
+-val LightGray = Color(0xFFF5F5F5)
+-val SurfaceGray = Color(0xFF1E1E1E)
+-
+-// Legacy colors for compatibility if needed
+-val Purple80 = Color(0xFFD0BCFF)
+-val PurpleGrey80 = Color(0xFFCCC2DC)
+-val Pink80 = Color(0xFFEFB8C8)
+-
+-val Purple40 = Color(0xFF6650a4)
+-val PurpleGrey40 = Color(0xFF625b71)
+-val Pink40 = Color(0xFF7d5260)
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/theme/Shape.kt b/app/src/main/java/org/alphaxiv/app/ui/theme/Shape.kt
+index 34e1620..58a3e0c 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/theme/Shape.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/theme/Shape.kt
+@@ -7,6 +7,6 @@ import androidx.compose.ui.unit.dp
+ val Shapes = Shapes(
+     small = RoundedCornerShape(8.dp),
+     medium = RoundedCornerShape(16.dp),
+-    large = RoundedCornerShape(24.dp),
+-    extraLarge = RoundedCornerShape(32.dp)
++    large = RoundedCornerShape(28.dp),
++    extraLarge = RoundedCornerShape(36.dp)
+ )
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/theme/Theme.kt b/app/src/main/java/org/alphaxiv/app/ui/theme/Theme.kt
+index ca2d6fc..5040fd0 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/theme/Theme.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/theme/Theme.kt
+@@ -5,46 +5,81 @@ import android.content.Context
+ import android.content.ContextWrapper
+ import android.os.Build
+ import androidx.compose.foundation.isSystemInDarkTheme
+-import androidx.compose.material3.MaterialTheme
+-import androidx.compose.material3.darkColorScheme
+-import androidx.compose.material3.dynamicDarkColorScheme
+-import androidx.compose.material3.dynamicLightColorScheme
+-import androidx.compose.material3.lightColorScheme
++import androidx.compose.material3.*
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.SideEffect
+-import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.toArgb
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.platform.LocalView
+ import androidx.core.view.WindowCompat
+
+-private val DarkColorScheme = darkColorScheme(
+-    primary = AlphaXivRedLight,
+-    secondary = AlphaXivRed,
+-    tertiary = Pink80,
+-    background = DarkGray,
+-    surface = SurfaceGray,
+-    onPrimary = Color.Black,
+-    onSecondary = Color.White,
+-    onBackground = Color.White,
+-    onSurface = Color.White
++private val LightColorScheme = lightColorScheme(
++    primary = primaryLight,
++    onPrimary = onPrimaryLight,
++    primaryContainer = primaryContainerLight,
++    onPrimaryContainer = onPrimaryContainerLight,
++    secondary = secondaryLight,
++    onSecondary = onSecondaryLight,
++    secondaryContainer = secondaryContainerLight,
++    onSecondaryContainer = onSecondaryContainerLight,
++    tertiary = tertiaryLight,
++    onTertiary = onTertiaryLight,
++    tertiaryContainer = tertiaryContainerLight,
++    onTertiaryContainer = onTertiaryContainerLight,
++    error = errorLight,
++    onError = onErrorLight,
++    errorContainer = errorContainerLight,
++    onErrorContainer = onErrorContainerLight,
++    background = backgroundLight,
++    onBackground = onBackgroundLight,
++    surface = surfaceLight,
++    onSurface = onSurfaceLight,
++    surfaceVariant = surfaceVariantLight,
++    onSurfaceVariant = onSurfaceVariantLight,
++    outline = outlineLight,
++    outlineVariant = outlineVariantLight,
++    scrim = scrimLight,
++    inverseSurface = inverseSurfaceLight,
++    inverseOnSurface = inverseOnSurfaceLight,
++    inversePrimary = inversePrimaryLight,
+ )
+
+-private val LightColorScheme = lightColorScheme(
+-    primary = AlphaXivRed,
+-    secondary = AlphaXivRedDark,
+-    tertiary = Pink40,
+-    background = LightGray,
+-    surface = Color.White,
+-    onPrimary = Color.White,
+-    onSecondary = Color.White,
+-    onBackground = Color.Black,
+-    onSurface = Color.Black
++private val DarkColorScheme = darkColorScheme(
++    primary = primaryDark,
++    onPrimary = onPrimaryDark,
++    primaryContainer = primaryContainerDark,
++    onPrimaryContainer = onPrimaryContainerDark,
++    secondary = secondaryDark,
++    onSecondary = onSecondaryDark,
++    secondaryContainer = secondaryContainerDark,
++    onSecondaryContainer = onSecondaryContainerDark,
++    tertiary = tertiaryDark,
++    onTertiary = onTertiaryDark,
++    tertiaryContainer = tertiaryContainerDark,
++    onTertiaryContainer = onTertiaryContainerDark,
++    error = errorDark,
++    onError = onErrorDark,
++    errorContainer = errorContainerDark,
++    onErrorContainer = onErrorContainerDark,
++    background = backgroundDark,
++    onBackground = onBackgroundDark,
++    surface = surfaceDark,
++    onSurface = onSurfaceDark,
++    surfaceVariant = surfaceVariantDark,
++    onSurfaceVariant = onSurfaceVariantDark,
++    outline = outlineDark,
++    outlineVariant = outlineVariantDark,
++    scrim = scrimDark,
++    inverseSurface = inverseSurfaceDark,
++    inverseOnSurface = inverseOnSurfaceDark,
++    inversePrimary = inversePrimaryDark,
+ )
+
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ fun AlphaXivTheme(
+     darkTheme: Boolean = isSystemInDarkTheme(),
++    // Dynamic color is available on Android 12+
+     dynamicColor: Boolean = true,
+     content: @Composable () -> Unit
+ ) {
+@@ -53,6 +88,7 @@ fun AlphaXivTheme(
+             val context = LocalContext.current
+             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+         }
++
+         darkTheme -> DarkColorScheme
+         else -> LightColorScheme
+     }
+@@ -67,10 +103,11 @@ fun AlphaXivTheme(
+         }
+     }
+
+-    MaterialTheme(
++    MaterialExpressiveTheme(
+         colorScheme = colorScheme,
+         typography = Typography,
+         shapes = Shapes,
++        motionScheme = MotionScheme.expressive(),
+         content = content
+     )
+ }
+diff --git a/app/src/main/java/org/alphaxiv/app/ui/theme/Type.kt b/app/src/main/java/org/alphaxiv/app/ui/theme/Type.kt
+index 7230e3d..ab87880 100644
+--- a/app/src/main/java/org/alphaxiv/app/ui/theme/Type.kt
++++ b/app/src/main/java/org/alphaxiv/app/ui/theme/Type.kt
+@@ -7,11 +7,109 @@ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.sp
+
+ val Typography = Typography(
++    displayLarge = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Bold,
++        fontSize = 57.sp,
++        lineHeight = 64.sp,
++        letterSpacing = (-0.25).sp
++    ),
++    displayMedium = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Bold,
++        fontSize = 45.sp,
++        lineHeight = 52.sp,
++        letterSpacing = 0.sp
++    ),
++    displaySmall = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Bold,
++        fontSize = 36.sp,
++        lineHeight = 44.sp,
++        letterSpacing = 0.sp
++    ),
++    headlineLarge = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Bold,
++        fontSize = 32.sp,
++        lineHeight = 40.sp,
++        letterSpacing = 0.sp
++    ),
++    headlineMedium = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Bold,
++        fontSize = 28.sp,
++        lineHeight = 36.sp,
++        letterSpacing = 0.sp
++    ),
++    headlineSmall = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Bold,
++        fontSize = 24.sp,
++        lineHeight = 32.sp,
++        letterSpacing = 0.sp
++    ),
++    titleLarge = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.SemiBold,
++        fontSize = 22.sp,
++        lineHeight = 28.sp,
++        letterSpacing = 0.sp
++    ),
++    titleMedium = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.SemiBold,
++        fontSize = 16.sp,
++        lineHeight = 24.sp,
++        letterSpacing = 0.15.sp
++    ),
++    titleSmall = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.SemiBold,
++        fontSize = 14.sp,
++        lineHeight = 20.sp,
++        letterSpacing = 0.1.sp
++    ),
+     bodyLarge = TextStyle(
+         fontFamily = FontFamily.Default,
+         fontWeight = FontWeight.Normal,
+         fontSize = 16.sp,
+         lineHeight = 24.sp,
+         letterSpacing = 0.5.sp
++    ),
++    bodyMedium = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Normal,
++        fontSize = 14.sp,
++        lineHeight = 20.sp,
++        letterSpacing = 0.25.sp
++    ),
++    bodySmall = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Normal,
++        fontSize = 12.sp,
++        lineHeight = 16.sp,
++        letterSpacing = 0.4.sp
++    ),
++    labelLarge = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Medium,
++        fontSize = 14.sp,
++        lineHeight = 20.sp,
++        letterSpacing = 0.1.sp
++    ),
++    labelMedium = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Medium,
++        fontSize = 12.sp,
++        lineHeight = 16.sp,
++        letterSpacing = 0.5.sp
++    ),
++    labelSmall = TextStyle(
++        fontFamily = FontFamily.Default,
++        fontWeight = FontWeight.Medium,
++        fontSize = 11.sp,
++        lineHeight = 16.sp,
++        letterSpacing = 0.5.sp
+     )
+ )
+diff --git a/app/src/main/res/values-night/themes.xml b/app/src/main/res/values-night/themes.xml
+new file mode 100644
+index 0000000..e2a7d9f
+--- /dev/null
++++ b/app/src/main/res/values-night/themes.xml
+@@ -0,0 +1,14 @@
++<resources xmlns:tools="http://schemas.android.com/tools">
++    <style name="Theme.AlphaXiv" parent="android:Theme.Material.Light.NoActionBar">
++        <item name="android:statusBarColor">@android:color/transparent</item>
++        <item name="android:navigationBarColor">@android:color/transparent</item>
++        <item name="android:windowTranslucentStatus">true</item>
++        <item name="android:windowTranslucentNavigation">true</item>
++    </style>
++
++    <style name="Theme.AlphaXiv.Starting" parent="Theme.SplashScreen">
++        <item name="windowSplashScreenBackground">#1A1110</item>
++        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
++        <item name="postSplashScreenTheme">@style/Theme.AlphaXiv</item>
++    </style>
++</resources>
+diff --git a/app/src/main/res/values/themes.xml b/app/src/main/res/values/themes.xml
+index a496dbb..3f8c991 100644
+--- a/app/src/main/res/values/themes.xml
++++ b/app/src/main/res/values/themes.xml
+@@ -5,4 +5,10 @@
+         <item name="android:windowTranslucentStatus">true</item>
+         <item name="android:windowTranslucentNavigation">true</item>
+     </style>
++
++    <style name="Theme.AlphaXiv.Starting" parent="Theme.SplashScreen">
++        <item name="windowSplashScreenBackground">#FBF8F7</item>
++        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
++        <item name="postSplashScreenTheme">@style/Theme.AlphaXiv</item>
++    </style>
+ </resources>
+diff --git a/app/src/test/java/org/alphaxiv/app/ui/ExpressiveUITest.kt b/app/src/test/java/org/alphaxiv/app/ui/ExpressiveUITest.kt
+new file mode 100644
+index 0000000..9cece8d
+--- /dev/null
++++ b/app/src/test/java/org/alphaxiv/app/ui/ExpressiveUITest.kt
+@@ -0,0 +1,56 @@
++package org.alphaxiv.app.ui
++
++import app.cash.paparazzi.DeviceConfig
++import app.cash.paparazzi.Paparazzi
++import org.alphaxiv.app.data.model.Paper
++import org.alphaxiv.app.ui.theme.AlphaXivTheme
++import org.alphaxiv.app.ui.screens.feed.PaperCard
++import org.alphaxiv.app.ui.screens.feed.HeroPaperCard
++import org.junit.Rule
++import org.junit.Test
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.padding
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.unit.dp
++
++class ExpressiveUITest {
++    @get:Rule
++    val paparazzi = Paparazzi(
++        deviceConfig = DeviceConfig.PIXEL_5,
++        theme = "android:Theme.Material.Light.NoActionBar"
++    )
++
++    private val mockPaper = Paper(
++        id = "1",
++        title = "Attention Is All You Need",
++        authors = listOf("Ashish Vaswani", "Noam Shazeer"),
++        summary = "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
++        publishedDate = "12 Jun 2017",
++        thumbnailUrl = null,
++        categories = listOf("cs.CL", "cs.LG"),
++        upvoteCount = 1337,
++        commentCount = 42
++    )
++
++    @Test
++    fun snapPaperCard() {
++        paparazzi.snapshot {
++            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
++                Box(modifier = Modifier.padding(16.dp)) {
++                    PaperCard(paper = mockPaper, onClick = {})
++                }
++            }
++        }
++    }
++
++    @Test
++    fun snapHeroPaperCard() {
++        paparazzi.snapshot {
++            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
++                Box(modifier = Modifier.padding(16.dp)) {
++                    HeroPaperCard(paper = mockPaper, onClick = {})
++                }
++            }
++        }
++    }
++}
+diff --git a/app/src/test/snapshots/images/org.alphaxiv.app.ui_ExpressiveUITest_snapPaperCard.png b/app/src/test/snapshots/images/org.alphaxiv.app.ui_ExpressiveUITest_snapPaperCard.png
+new file mode 100644
+index 0000000..6173aca
+Binary files /dev/null and b/app/src/test/snapshots/images/org.alphaxiv.app.ui_ExpressiveUITest_snapPaperCard.png differ
+diff --git a/build.gradle b/build.gradle
+index 6dbed1b..bd964b9 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -1,6 +1,8 @@
+ plugins {
+-    id "com.android.application" version "8.5.0" apply false
+-    id "com.android.library" version "8.5.0" apply false
+-    id "org.jetbrains.kotlin.android" version "1.9.22" apply false
++    id "app.cash.paparazzi" version "1.3.5" apply false
++    id "com.android.application" version "8.7.2" apply false
++    id "com.android.library" version "8.7.2" apply false
++    id "org.jetbrains.kotlin.android" version "2.0.21" apply false
++    id "org.jetbrains.kotlin.plugin.compose" version "2.0.21" apply false
+     id "com.google.dagger.hilt.android" version "2.51.1" apply false
+ }
+diff --git a/diff_context.txt b/diff_context.txt
+new file mode 100644
+index 0000000..30caf27
+--- /dev/null
++++ b/diff_context.txt
+@@ -0,0 +1,670 @@
++package org.alphaxiv.app.ui.theme
++
++import androidx.compose.ui.graphics.Color
++
++// alphaXiv Red palette - Refined Material 3 Expressive
++val primaryLight = Color(0xFFB11818)
++val onPrimaryLight = Color(0xFFFFFFFF)
++val primaryContainerLight = Color(0xFFFFDAD5)
++val onPrimaryContainerLight = Color(0xFF410001)
++
++val secondaryLight = Color(0xFF775652)
++val onSecondaryLight = Color(0xFFFFFFFF)
++val secondaryContainerLight = Color(0xFFFFDAD5)
++val onSecondaryContainerLight = Color(0xFF2C1512)
++
++val tertiaryLight = Color(0xFF984900)
++val onTertiaryLight = Color(0xFFFFFFFF)
++val tertiaryContainerLight = Color(0xFFFFDCC5)
++val onTertiaryContainerLight = Color(0xFF311300)
++
++val errorLight = Color(0xFFBA1A1A)
++val onErrorLight = Color(0xFFFFFFFF)
++val errorContainerLight = Color(0xFFFFDAD6)
++val onErrorContainerLight = Color(0xFF410002)
++
++val backgroundLight = Color(0xFFFFF8F6)
++val onBackgroundLight = Color(0xFF231918)
++val surfaceLight = Color(0xFFFFF8F6)
++val onSurfaceLight = Color(0xFF231918)
++val surfaceVariantLight = Color(0xFFF5DDDA)
++val onSurfaceVariantLight = Color(0xFF534341)
++val outlineLight = Color(0xFF857371)
++val outlineVariantLight = Color(0xFFD8C2BF)
++val scrimLight = Color(0xFF000000)
++val inverseSurfaceLight = Color(0xFF392E2D)
++val inverseOnSurfaceLight = Color(0xFFFFEDEA)
++val inversePrimaryLight = Color(0xFFFFB4AA)
++
++val surfaceDimLight = Color(0xFFE8D6D4)
++val surfaceBrightLight = Color(0xFFFFF8F7)
++val surfaceContainerLowestLight = Color(0xFFFFFFFF)
++val surfaceContainerLowLight = Color(0xFFF7F2F1)
++val surfaceContainerLight = Color(0xFFF1EDEC)
++val surfaceContainerHighLight = Color(0xFFEBE7E6)
++val surfaceContainerHighestLight = Color(0xFFE5E1E0)
++
++// Dark Theme - More expressive and deep
++val primaryDark = Color(0xFFFFB4AA)
++val onPrimaryDark = Color(0xFF690004)
++val primaryContainerDark = Color(0xFF901413)
++val onPrimaryContainerDark = Color(0xFFFFDAD5)
++
++val secondaryDark = Color(0xFFE7BDB7)
++val onSecondaryDark = Color(0xFF442926)
++val secondaryContainerDark = Color(0xFF5D3F3B)
++val onSecondaryContainerDark = Color(0xFFFFDAD5)
++
++val tertiaryDark = Color(0xFFFFB784)
++val onTertiaryDark = Color(0xFF512400)
++val tertiaryContainerDark = Color(0xFF733600)
++val onTertiaryContainerDark = Color(0xFFFFDCC5)
++
++val errorDark = Color(0xFFFFB4AB)
++val onErrorDark = Color(0xFF690005)
++val errorContainerDark = Color(0xFF93000A)
++val onErrorContainerDark = Color(0xFFFFDAD6)
++
++val backgroundDark = Color(0xFF140C0B) // Deeper background
++val onBackgroundDark = Color(0xFFF1DEDC)
++val surfaceDark = Color(0xFF140C0B)
++val onSurfaceDark = Color(0xFFF1DEDC)
++val surfaceVariantDark = Color(0xFF534341)
++val onSurfaceVariantDark = Color(0xFFD8C2BF)
++val outlineDark = Color(0xFFA08C8A)
++val outlineVariantDark = Color(0xFF534341)
++val scrimDark = Color(0xFF000000)
++val inverseSurfaceDark = Color(0xFFF1DEDC)
++val inverseOnSurfaceDark = Color(0xFF392E2D)
++val inversePrimaryDark = Color(0xFFB12D23)
++
++val surfaceDimDark = Color(0xFF1A1110)
++val surfaceBrightDark = Color(0xFF423735)
++val surfaceContainerLowestDark = Color(0xFF0F0706)
++val surfaceContainerLowDark = Color(0xFF231918)
++val surfaceContainerDark = Color(0xFF271D1C)
++val surfaceContainerHighDark = Color(0xFF322726)
++val surfaceContainerHighestDark = Color(0xFF3D3231)
++
++// alphaXiv Specific Colors
++val AlphaXivRed = Color(0xFFB11818)
++package org.alphaxiv.app.ui.screens.feed
++
++import androidx.compose.animation.*
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.LazyRow
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.lazy.itemsIndexed
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.*
++import androidx.compose.material.icons.automirrored.filled.Sort
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material3.*
++import androidx.compose.material3.pulltorefresh.PullToRefreshBox
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.RectangleShape
++import androidx.compose.ui.input.nestedscroll.nestedScroll
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import coil.compose.AsyncImage
++import coil.request.ImageRequest
++import org.alphaxiv.app.data.model.Paper
++
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
++@Composable
++fun FeedScreen(
++    viewModel: FeedViewModel,
++    onPaperClick: (String) -> Unit
++) {
++    val uiState by viewModel.uiState.collectAsState()
++    val searchState by viewModel.searchState.collectAsState()
++
++    var searchQuery by remember { mutableStateOf("") }
++    var searchActive by remember { mutableStateOf(false) }
++
++    var selectedSort by remember { mutableStateOf("Hot") }
++    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
++
++    Scaffold(
++        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
++        topBar = {
++            Column(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .windowInsetsPadding(WindowInsets.statusBars)
++                    .background(if (searchActive) MaterialTheme.colorScheme.surface else Color.Transparent)
++            ) {
++                SearchBar(
++                    modifier = Modifier
++                        .align(Alignment.CenterHorizontally)
++                        .padding(horizontal = if (searchActive) 0.dp else 16.dp, vertical = 8.dp)
++                        .animateContentSize(),
++                    inputField = {
++                        SearchBarDefaults.InputField(
++                            query = searchQuery,
++                            onQueryChange = {
++                                searchQuery = it
++                                viewModel.search(it)
++                            },
++                            onSearch = { viewModel.search(it) },
++                            expanded = searchActive,
++                            onExpandedChange = { searchActive = it },
++                            placeholder = { Text("Search papers...") },
++                            leadingIcon = {
++                                if (searchActive) {
++                                    IconButton(onClick = {
++                                        searchActive = false
++                                        searchQuery = ""
++                                        viewModel.clearSearch()
++                                    }) {
++                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
++                                    }
++                                } else {
++                                    Icon(Icons.Default.Search, contentDescription = "Search")
++                                }
++                            },
++                            trailingIcon = {
++                                if (searchActive && searchQuery.isNotEmpty()) {
++                                    IconButton(onClick = {
++                                        searchQuery = ""
++                                        viewModel.clearSearch()
++                                    }) {
++                                        Icon(Icons.Default.Close, contentDescription = "Clear")
++                                    }
++                                }
++                            }
++                        )
++                    },
++                    expanded = searchActive,
++                    onExpandedChange = { searchActive = it },
++                    colors = SearchBarDefaults.colors(
++                        containerColor = if (searchActive) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainerHigh
++                    ),
++                    shape = if (searchActive) RectangleShape else MaterialTheme.shapes.extraLarge,
++                    tonalElevation = if (searchActive) 0.dp else 6.dp,
++                    shadowElevation = if (searchActive) 0.dp else 8.dp
++                ) {
++                    // Search results content
++                    Box(modifier = Modifier.fillMaxSize()) {
++                        when (val state = searchState) {
++                            is SearchUiState.Loading -> {
++                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                                    CircularWavyProgressIndicator()
++                                }
++                            }
++                            is SearchUiState.Success -> {
++                                LazyColumn(
++                                    modifier = Modifier.fillMaxSize(),
++                                    contentPadding = PaddingValues(16.dp),
++                                    verticalArrangement = Arrangement.spacedBy(16.dp)
++                                ) {
++                                    items(state.results, key = { it.id }) { paper ->
++                                        PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
++                                    }
++                                }
++                            }
++                            is SearchUiState.Error -> {
++                                Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
++                                    Text(state.message, color = MaterialTheme.colorScheme.error)
++                                }
++                            }
++                            is SearchUiState.Idle -> {
++                                if (searchQuery.isEmpty()) {
++                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                                        Text("Type to search papers", color = MaterialTheme.colorScheme.onSurfaceVariant)
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++
++                if (!searchActive) {
++                    Row(
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .padding(horizontal = 20.dp, vertical = 8.dp),
++                        verticalAlignment = Alignment.CenterVertically,
++                        horizontalArrangement = Arrangement.SpaceBetween
++                    ) {
++                        IconButton(onClick = { /* Menu */ }) {
++                            Icon(Icons.Default.Menu, contentDescription = "Menu")
++                        }
++                        Text(
++                            text = "alphaXiv",
++                            style = MaterialTheme.typography.titleLarge,
++                            fontWeight = FontWeight.ExtraBold,
++                            color = MaterialTheme.colorScheme.primary
++                        )
++                        IconButton(onClick = { /* Random */ }) {
++                            Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
++                        }
++                    }
++                }
++            }
++        },
++        containerColor = MaterialTheme.colorScheme.background
++    ) { innerPadding ->
++        val uiStateValue = uiState
++        val isLoading = uiStateValue is FeedUiState.Loading
++        val papers = (uiStateValue as? FeedUiState.Success)?.papers ?: emptyList()
++
++        PullToRefreshBox(
++            isRefreshing = isLoading && papers.isNotEmpty(),
++            onRefresh = { viewModel.loadFeed(selectedSort) },
++            modifier = Modifier.padding(innerPadding).fillMaxSize()
++        ) {
++            if (isLoading && papers.isEmpty()) {
++                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                    CircularWavyProgressIndicator()
++                }
++            } else {
++                LazyColumn(
++                    modifier = Modifier.fillMaxSize(),
++                    contentPadding = PaddingValues(bottom = 100.dp),
++                    verticalArrangement = Arrangement.spacedBy(20.dp)
++                ) {
++                    item {
++                        Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
++                            Text(
++                                text = "Popular Papers",
++                                style = MaterialTheme.typography.displaySmall,
++                                fontWeight = FontWeight.Black,
++                                color = MaterialTheme.colorScheme.onSurface
++                            )
++                            Text(
++                                text = "Trending research discussed today",
++                                style = MaterialTheme.typography.bodyLarge,
++                                color = MaterialTheme.colorScheme.onSurfaceVariant
++                            )
++
++                            Spacer(modifier = Modifier.height(16.dp))
++
++                            SortSelector(
++                                selectedSort = selectedSort,
++                                onSortSelected = {
++                                    selectedSort = it
++                                    viewModel.loadFeed(it)
++                                }
++                            )
++                        }
++                    }
++
++                    if (uiStateValue is FeedUiState.Success) {
++                        itemsIndexed(papers, key = { _, paper -> paper.id }) { index, paper ->
++                            if (index == 0) {
++                                HeroPaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
++                            } else {
++                                // Alternating expressive colors
++                                val containerColor = when (index % 4) {
++                                    1 -> MaterialTheme.colorScheme.tertiaryContainer
++                                    2 -> MaterialTheme.colorScheme.secondaryContainer
++                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
++                                }
++                                val onContainerColor = when (index % 4) {
++                                    1 -> MaterialTheme.colorScheme.onTertiaryContainer
++                                    2 -> MaterialTheme.colorScheme.onSecondaryContainer
++                                    else -> MaterialTheme.colorScheme.onSurface
++                                }
++
++                                PaperCard(
++                                    paper = paper,
++                                    onClick = { onPaperClick(paper.id) },
++                                    containerColor = containerColor,
++                                    contentColor = onContainerColor
++                                )
++                            }
++                        }
++                    } else if (uiStateValue is FeedUiState.Error) {
++                        item {
++                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
++                                Text(uiStateValue.message, color = MaterialTheme.colorScheme.error)
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
++
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++fun SortSelector(
++    selectedSort: String,
++    onSortSelected: (String) -> Unit
++) {
++    val options = listOf("Hot", "New", "Top")
++    Row(
++        modifier = Modifier.padding(horizontal = 20.dp),
++        horizontalArrangement = Arrangement.spacedBy(8.dp)
++    ) {
++        options.forEach { option ->
++            FilterChip(
++                selected = selectedSort == option,
++                onClick = { onSortSelected(option) },
++                label = { Text(option, fontWeight = FontWeight.Bold) },
++                shape = MaterialTheme.shapes.medium
++            )
++        }
++    }
++}
++
++@Composable
++fun HeroPaperCard(
++    paper: Paper,
++    onClick: () -> Unit
++) {
++    Surface(
++        onClick = onClick,
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = 16.dp),
++        color = MaterialTheme.colorScheme.primaryContainer,
++        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
++        shape = MaterialTheme.shapes.extraLarge,
++        tonalElevation = 2.dp
++    ) {
++        Column(modifier = Modifier.padding(24.dp)) {
++            Row(
++                modifier = Modifier.fillMaxWidth(),
++                horizontalArrangement = Arrangement.SpaceBetween,
++                verticalAlignment = Alignment.Top
++            ) {
++                Column(modifier = Modifier.weight(1f)) {
++                    Text(
++                        text = "FEATURED",
++                        style = MaterialTheme.typography.labelLarge,
++                        fontWeight = FontWeight.Black,
++                        color = MaterialTheme.colorScheme.primary
++                    )
++                    Spacer(modifier = Modifier.height(8.dp))
++                    Text(
++                        text = paper.title,
++                        style = MaterialTheme.typography.headlineSmall,
++                        fontWeight = FontWeight.ExtraBold,
++                        lineHeight = 30.sp
++                    )
++                }
++
++                if (paper.thumbnailUrl != null) {
++                    Spacer(modifier = Modifier.width(16.dp))
++                    AsyncImage(
++                        model = ImageRequest.Builder(LocalContext.current)
++                            .data(paper.thumbnailUrl)
++                            .crossfade(true)
++                            .build(),
++                        contentDescription = null,
++                        modifier = Modifier
++                            .size(100.dp)
++                            .clip(MaterialTheme.shapes.large),
++                        contentScale = ContentScale.Crop
++                    )
++                }
++            }
++
++            Spacer(modifier = Modifier.height(16.dp))
++
++            Text(
++                text = paper.summary,
++                style = MaterialTheme.typography.bodyLarge,
++                maxLines = 3,
++                overflow = TextOverflow.Ellipsis,
++                lineHeight = 22.sp
++            )
++
++            Spacer(modifier = Modifier.height(20.dp))
++
++            Row(verticalAlignment = Alignment.CenterVertically) {
++                Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(18.dp))
++                Spacer(modifier = Modifier.width(6.dp))
++                Text(text = "${paper.upvoteCount}", fontWeight = FontWeight.Bold)
++                Spacer(modifier = Modifier.width(16.dp))
++                Icon(Icons.Default.Comment, contentDescription = null, modifier = Modifier.size(18.dp))
++                Spacer(modifier = Modifier.width(6.dp))
++                Text(text = "${paper.commentCount}", fontWeight = FontWeight.Bold)
++            }
++        }
++    }
++}
++
++@Composable
++fun PaperCard(
++    paper: Paper,
++    onClick: () -> Unit,
++    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
++    contentColor: Color = MaterialTheme.colorScheme.onSurface
++) {
++    Surface(
++        onClick = onClick,
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = 16.dp),
++        color = containerColor,
++        contentColor = contentColor,
++        shape = MaterialTheme.shapes.large,
++        tonalElevation = 1.dp
++    ) {
++        Row(
++            modifier = Modifier.padding(16.dp),
++            horizontalArrangement = Arrangement.spacedBy(16.dp)
++        ) {
++            Column(modifier = Modifier.weight(1f)) {
++                Text(
++                    text = paper.publishedDate,
++                    style = MaterialTheme.typography.labelSmall,
++                    fontWeight = FontWeight.Bold,
++                    color = contentColor.copy(alpha = 0.7f)
++                )
++                Spacer(modifier = Modifier.height(4.dp))
++                Text(
++                    text = paper.title,
++                    style = MaterialTheme.typography.titleMedium,
++                    fontWeight = FontWeight.ExtraBold,
++                    maxLines = 3,
++                    overflow = TextOverflow.Ellipsis,
++                    lineHeight = 22.sp
++                )
++                Spacer(modifier = Modifier.height(8.dp))
++                Text(
++                    text = paper.summary,
++                    style = MaterialTheme.typography.bodySmall,
++                    maxLines = 2,
++                    overflow = TextOverflow.Ellipsis,
++                    lineHeight = 18.sp,
++                    color = contentColor.copy(alpha = 0.8f)
++                )
++
++                Spacer(modifier = Modifier.height(12.dp))
++
++                Row(verticalAlignment = Alignment.CenterVertically) {
++                    Icon(
++                        imageVector = Icons.Default.ThumbUp,
++                        contentDescription = null,
++                        modifier = Modifier.size(14.dp)
++                    )
++                    Spacer(modifier = Modifier.width(4.dp))
++                    Text(
++                        text = "${paper.upvoteCount}",
++                        style = MaterialTheme.typography.labelSmall,
++                        fontWeight = FontWeight.Bold
++                    )
++                    Spacer(modifier = Modifier.width(12.dp))
++                    Text(
++                        text = "${paper.commentCount} comments",
++                        style = MaterialTheme.typography.labelSmall,
++                        color = contentColor.copy(alpha = 0.6f)
++                    )
++                }
++            }
++
++            if (paper.thumbnailUrl != null) {
++                AsyncImage(
++                    model = ImageRequest.Builder(LocalContext.current)
++                        .data(paper.thumbnailUrl)
++                        .crossfade(true)
++                        .build(),
++                    contentDescription = null,
++                    modifier = Modifier
++                        .size(80.dp)
++                        .clip(MaterialTheme.shapes.medium)
++                        .background(MaterialTheme.colorScheme.surfaceVariant),
++                    contentScale = ContentScale.Crop
++                )
++            }
++        }
++    }
++}
++package org.alphaxiv.app.ui.screens.bookmarks
++
++import androidx.compose.foundation.layout.*
++import androidx.compose.material3.*
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.unit.dp
++
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.itemsIndexed
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.collectAsState
++import androidx.compose.runtime.getValue
++import androidx.compose.ui.input.nestedscroll.nestedScroll
++import androidx.compose.ui.text.font.FontWeight
++import org.alphaxiv.app.ui.screens.feed.PaperCard
++
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
++@Composable
++fun BookmarksScreen(
++    viewModel: BookmarkViewModel,
++    onPaperClick: (String) -> Unit
++) {
++    LaunchedEffect(Unit) {
++        viewModel.loadBookmarks()
++    }
++
++    val uiState by viewModel.uiState.collectAsState()
++    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
++
++    Scaffold(
++        containerColor = MaterialTheme.colorScheme.background,
++        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
++        topBar = {
++            TopAppBar(
++                title = { Text("Bookmarks", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black) },
++                scrollBehavior = scrollBehavior,
++                colors = TopAppBarDefaults.topAppBarColors(
++                    containerColor = MaterialTheme.colorScheme.background,
++                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
++                )
++            )
++        }
++    ) { innerPadding ->
++        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
++            when (val state = uiState) {
++                is BookmarkUiState.Loading -> {
++                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                        CircularWavyProgressIndicator()
++                    }
++                }
++                is BookmarkUiState.Success -> {
++                    if (state.papers.isEmpty()) {
++                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                            Text(
++                                text = "No saved papers",
++                                style = MaterialTheme.typography.bodyLarge,
++                                color = MaterialTheme.colorScheme.outline
++                            )
++                        }
++                    } else {
++                        LazyColumn(
++                            modifier = Modifier.fillMaxSize(),
++                            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
++                            verticalArrangement = Arrangement.spacedBy(16.dp)
++                        ) {
++                            itemsIndexed(state.papers, key = { _, paper -> paper.id }) { index, paper ->
++                                val containerColor = when (index % 4) {
++                                    0 -> MaterialTheme.colorScheme.tertiaryContainer
++                                    1 -> MaterialTheme.colorScheme.secondaryContainer
++                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
++                                }
++                                val onContainerColor = when (index % 4) {
++                                    0 -> MaterialTheme.colorScheme.onTertiaryContainer
++                                    1 -> MaterialTheme.colorScheme.onSecondaryContainer
++                                    else -> MaterialTheme.colorScheme.onSurface
++                                }
++
++                                PaperCard(
++                                    paper = paper,
++                                    onClick = { onPaperClick(paper.id) },
++                                    containerColor = containerColor,
++                                    contentColor = onContainerColor
++                                )
++                            }
++                        }
++                    }
++                }
++                is BookmarkUiState.Error -> {
++                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
++                    }
++                }
++            }
++        }
++    }
++}
++package org.alphaxiv.app.ui
++
++import app.cash.paparazzi.DeviceConfig
++import app.cash.paparazzi.Paparazzi
++import org.alphaxiv.app.data.model.Paper
++import org.alphaxiv.app.ui.theme.AlphaXivTheme
++import org.alphaxiv.app.ui.screens.feed.PaperCard
++import org.junit.Rule
++import org.junit.Test
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.padding
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.unit.dp
++
++class ExpressiveUITest {
++    @get:Rule
++    val paparazzi = Paparazzi(
++        deviceConfig = DeviceConfig.PIXEL_5,
++        theme = "android:Theme.Material.Light.NoActionBar"
++    )
++
++    @Test
++    fun snapPaperCard() {
++        val paper = Paper(
++            id = "1",
++            title = "Attention Is All You Need",
++            authors = listOf("Ashish Vaswani", "Noam Shazeer"),
++            summary = "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
++            publishedDate = "12 Jun 2017",
++            thumbnailUrl = null,
++            categories = listOf("cs.CL", "cs.LG"),
++            upvoteCount = 1337,
++            commentCount = 42
++        )
++
++        paparazzi.snapshot {
++            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
++                Box(modifier = Modifier.padding(16.dp)) {
++                    PaperCard(paper = paper, onClick = {})
++                }
++            }
++        }
++    }
++}
+diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
+index a441313..df97d72 100644
+--- a/gradle/wrapper/gradle-wrapper.properties
++++ b/gradle/wrapper/gradle-wrapper.properties
+@@ -1,6 +1,6 @@
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-8.8-bin.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-8.10.2-bin.zip
+ networkTimeout=10000
+ validateDistributionUrl=true
+ zipStoreBase=GRADLE_USER_HOME

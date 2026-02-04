@@ -5,6 +5,7 @@ import app.cash.paparazzi.Paparazzi
 import org.alphaxiv.app.data.model.Paper
 import org.alphaxiv.app.ui.theme.AlphaXivTheme
 import org.alphaxiv.app.ui.screens.feed.PaperCard
+import org.alphaxiv.app.ui.screens.feed.HeroPaperCard
 import org.junit.Rule
 import org.junit.Test
 import androidx.compose.foundation.layout.Box
@@ -19,24 +20,35 @@ class ExpressiveUITest {
         theme = "android:Theme.Material.Light.NoActionBar"
     )
 
+    private val mockPaper = Paper(
+        id = "1",
+        title = "Attention Is All You Need",
+        authors = listOf("Ashish Vaswani", "Noam Shazeer"),
+        summary = "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
+        publishedDate = "12 Jun 2017",
+        thumbnailUrl = null,
+        categories = listOf("cs.CL", "cs.LG"),
+        upvoteCount = 1337,
+        commentCount = 42
+    )
+
     @Test
     fun snapPaperCard() {
-        val paper = Paper(
-            id = "1",
-            title = "Attention Is All You Need",
-            authors = listOf("Ashish Vaswani", "Noam Shazeer"),
-            summary = "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
-            publishedDate = "12 Jun 2017",
-            thumbnailUrl = null,
-            categories = listOf("cs.CL", "cs.LG"),
-            upvoteCount = 1337,
-            commentCount = 42
-        )
-
         paparazzi.snapshot {
             AlphaXivTheme(darkTheme = true, dynamicColor = false) {
                 Box(modifier = Modifier.padding(16.dp)) {
-                    PaperCard(paper = paper, onClick = {})
+                    PaperCard(paper = mockPaper, onClick = {})
+                }
+            }
+        }
+    }
+
+    @Test
+    fun snapHeroPaperCard() {
+        paparazzi.snapshot {
+            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
+                Box(modifier = Modifier.padding(16.dp)) {
+                    HeroPaperCard(paper = mockPaper, onClick = {})
                 }
             }
         }

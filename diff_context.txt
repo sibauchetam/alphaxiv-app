@@ -1,0 +1,670 @@
+package org.alphaxiv.app.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// alphaXiv Red palette - Refined Material 3 Expressive
+val primaryLight = Color(0xFFB11818)
+val onPrimaryLight = Color(0xFFFFFFFF)
+val primaryContainerLight = Color(0xFFFFDAD5)
+val onPrimaryContainerLight = Color(0xFF410001)
+
+val secondaryLight = Color(0xFF775652)
+val onSecondaryLight = Color(0xFFFFFFFF)
+val secondaryContainerLight = Color(0xFFFFDAD5)
+val onSecondaryContainerLight = Color(0xFF2C1512)
+
+val tertiaryLight = Color(0xFF984900)
+val onTertiaryLight = Color(0xFFFFFFFF)
+val tertiaryContainerLight = Color(0xFFFFDCC5)
+val onTertiaryContainerLight = Color(0xFF311300)
+
+val errorLight = Color(0xFFBA1A1A)
+val onErrorLight = Color(0xFFFFFFFF)
+val errorContainerLight = Color(0xFFFFDAD6)
+val onErrorContainerLight = Color(0xFF410002)
+
+val backgroundLight = Color(0xFFFFF8F6)
+val onBackgroundLight = Color(0xFF231918)
+val surfaceLight = Color(0xFFFFF8F6)
+val onSurfaceLight = Color(0xFF231918)
+val surfaceVariantLight = Color(0xFFF5DDDA)
+val onSurfaceVariantLight = Color(0xFF534341)
+val outlineLight = Color(0xFF857371)
+val outlineVariantLight = Color(0xFFD8C2BF)
+val scrimLight = Color(0xFF000000)
+val inverseSurfaceLight = Color(0xFF392E2D)
+val inverseOnSurfaceLight = Color(0xFFFFEDEA)
+val inversePrimaryLight = Color(0xFFFFB4AA)
+
+val surfaceDimLight = Color(0xFFE8D6D4)
+val surfaceBrightLight = Color(0xFFFFF8F7)
+val surfaceContainerLowestLight = Color(0xFFFFFFFF)
+val surfaceContainerLowLight = Color(0xFFF7F2F1)
+val surfaceContainerLight = Color(0xFFF1EDEC)
+val surfaceContainerHighLight = Color(0xFFEBE7E6)
+val surfaceContainerHighestLight = Color(0xFFE5E1E0)
+
+// Dark Theme - More expressive and deep
+val primaryDark = Color(0xFFFFB4AA)
+val onPrimaryDark = Color(0xFF690004)
+val primaryContainerDark = Color(0xFF901413)
+val onPrimaryContainerDark = Color(0xFFFFDAD5)
+
+val secondaryDark = Color(0xFFE7BDB7)
+val onSecondaryDark = Color(0xFF442926)
+val secondaryContainerDark = Color(0xFF5D3F3B)
+val onSecondaryContainerDark = Color(0xFFFFDAD5)
+
+val tertiaryDark = Color(0xFFFFB784)
+val onTertiaryDark = Color(0xFF512400)
+val tertiaryContainerDark = Color(0xFF733600)
+val onTertiaryContainerDark = Color(0xFFFFDCC5)
+
+val errorDark = Color(0xFFFFB4AB)
+val onErrorDark = Color(0xFF690005)
+val errorContainerDark = Color(0xFF93000A)
+val onErrorContainerDark = Color(0xFFFFDAD6)
+
+val backgroundDark = Color(0xFF140C0B) // Deeper background
+val onBackgroundDark = Color(0xFFF1DEDC)
+val surfaceDark = Color(0xFF140C0B)
+val onSurfaceDark = Color(0xFFF1DEDC)
+val surfaceVariantDark = Color(0xFF534341)
+val onSurfaceVariantDark = Color(0xFFD8C2BF)
+val outlineDark = Color(0xFFA08C8A)
+val outlineVariantDark = Color(0xFF534341)
+val scrimDark = Color(0xFF000000)
+val inverseSurfaceDark = Color(0xFFF1DEDC)
+val inverseOnSurfaceDark = Color(0xFF392E2D)
+val inversePrimaryDark = Color(0xFFB12D23)
+
+val surfaceDimDark = Color(0xFF1A1110)
+val surfaceBrightDark = Color(0xFF423735)
+val surfaceContainerLowestDark = Color(0xFF0F0706)
+val surfaceContainerLowDark = Color(0xFF231918)
+val surfaceContainerDark = Color(0xFF271D1C)
+val surfaceContainerHighDark = Color(0xFF322726)
+val surfaceContainerHighestDark = Color(0xFF3D3231)
+
+// alphaXiv Specific Colors
+val AlphaXivRed = Color(0xFFB11818)
+package org.alphaxiv.app.ui.screens.feed
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import org.alphaxiv.app.data.model.Paper
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun FeedScreen(
+    viewModel: FeedViewModel,
+    onPaperClick: (String) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val searchState by viewModel.searchState.collectAsState()
+
+    var searchQuery by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
+
+    var selectedSort by remember { mutableStateOf("Hot") }
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .background(if (searchActive) MaterialTheme.colorScheme.surface else Color.Transparent)
+            ) {
+                SearchBar(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(horizontal = if (searchActive) 0.dp else 16.dp, vertical = 8.dp)
+                        .animateContentSize(),
+                    inputField = {
+                        SearchBarDefaults.InputField(
+                            query = searchQuery,
+                            onQueryChange = {
+                                searchQuery = it
+                                viewModel.search(it)
+                            },
+                            onSearch = { viewModel.search(it) },
+                            expanded = searchActive,
+                            onExpandedChange = { searchActive = it },
+                            placeholder = { Text("Search papers...") },
+                            leadingIcon = {
+                                if (searchActive) {
+                                    IconButton(onClick = {
+                                        searchActive = false
+                                        searchQuery = ""
+                                        viewModel.clearSearch()
+                                    }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                } else {
+                                    Icon(Icons.Default.Search, contentDescription = "Search")
+                                }
+                            },
+                            trailingIcon = {
+                                if (searchActive && searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        searchQuery = ""
+                                        viewModel.clearSearch()
+                                    }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                    }
+                                }
+                            }
+                        )
+                    },
+                    expanded = searchActive,
+                    onExpandedChange = { searchActive = it },
+                    colors = SearchBarDefaults.colors(
+                        containerColor = if (searchActive) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    shape = if (searchActive) RectangleShape else MaterialTheme.shapes.extraLarge,
+                    tonalElevation = if (searchActive) 0.dp else 6.dp,
+                    shadowElevation = if (searchActive) 0.dp else 8.dp
+                ) {
+                    // Search results content
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when (val state = searchState) {
+                            is SearchUiState.Loading -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularWavyProgressIndicator()
+                                }
+                            }
+                            is SearchUiState.Success -> {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(state.results, key = { it.id }) { paper ->
+                                        PaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
+                                    }
+                                }
+                            }
+                            is SearchUiState.Error -> {
+                                Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text(state.message, color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                            is SearchUiState.Idle -> {
+                                if (searchQuery.isEmpty()) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("Type to search papers", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!searchActive) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = { /* Menu */ }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                        Text(
+                            text = "alphaXiv",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        IconButton(onClick = { /* Random */ }) {
+                            Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
+        val uiStateValue = uiState
+        val isLoading = uiStateValue is FeedUiState.Loading
+        val papers = (uiStateValue as? FeedUiState.Success)?.papers ?: emptyList()
+
+        PullToRefreshBox(
+            isRefreshing = isLoading && papers.isNotEmpty(),
+            onRefresh = { viewModel.loadFeed(selectedSort) },
+            modifier = Modifier.padding(innerPadding).fillMaxSize()
+        ) {
+            if (isLoading && papers.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularWavyProgressIndicator()
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    item {
+                        Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
+                            Text(
+                                text = "Popular Papers",
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Trending research discussed today",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            SortSelector(
+                                selectedSort = selectedSort,
+                                onSortSelected = {
+                                    selectedSort = it
+                                    viewModel.loadFeed(it)
+                                }
+                            )
+                        }
+                    }
+
+                    if (uiStateValue is FeedUiState.Success) {
+                        itemsIndexed(papers, key = { _, paper -> paper.id }) { index, paper ->
+                            if (index == 0) {
+                                HeroPaperCard(paper = paper, onClick = { onPaperClick(paper.id) })
+                            } else {
+                                // Alternating expressive colors
+                                val containerColor = when (index % 4) {
+                                    1 -> MaterialTheme.colorScheme.tertiaryContainer
+                                    2 -> MaterialTheme.colorScheme.secondaryContainer
+                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                }
+                                val onContainerColor = when (index % 4) {
+                                    1 -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    2 -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+
+                                PaperCard(
+                                    paper = paper,
+                                    onClick = { onPaperClick(paper.id) },
+                                    containerColor = containerColor,
+                                    contentColor = onContainerColor
+                                )
+                            }
+                        }
+                    } else if (uiStateValue is FeedUiState.Error) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text(uiStateValue.message, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SortSelector(
+    selectedSort: String,
+    onSortSelected: (String) -> Unit
+) {
+    val options = listOf("Hot", "New", "Top")
+    Row(
+        modifier = Modifier.padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        options.forEach { option ->
+            FilterChip(
+                selected = selectedSort == option,
+                onClick = { onSortSelected(option) },
+                label = { Text(option, fontWeight = FontWeight.Bold) },
+                shape = MaterialTheme.shapes.medium
+            )
+        }
+    }
+}
+
+@Composable
+fun HeroPaperCard(
+    paper: Paper,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "FEATURED",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = paper.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 30.sp
+                    )
+                }
+
+                if (paper.thumbnailUrl != null) {
+                    Spacer(modifier = Modifier.width(16.dp))
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(paper.thumbnailUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(MaterialTheme.shapes.large),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = paper.summary,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 22.sp
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.ThumbUp, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "${paper.upvoteCount}", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(Icons.Default.Comment, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "${paper.commentCount}", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun PaperCard(
+    paper: Paper,
+    onClick: () -> Unit,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = paper.publishedDate,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = paper.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 22.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = paper.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp,
+                    color = contentColor.copy(alpha = 0.8f)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ThumbUp,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${paper.upvoteCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "${paper.commentCount} comments",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            if (paper.thumbnailUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(paper.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+    }
+}
+package org.alphaxiv.app.ui.screens.bookmarks
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
+import org.alphaxiv.app.ui.screens.feed.PaperCard
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun BookmarksScreen(
+    viewModel: BookmarkViewModel,
+    onPaperClick: (String) -> Unit
+) {
+    LaunchedEffect(Unit) {
+        viewModel.loadBookmarks()
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text("Bookmarks", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black) },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
+            )
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            when (val state = uiState) {
+                is BookmarkUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularWavyProgressIndicator()
+                    }
+                }
+                is BookmarkUiState.Success -> {
+                    if (state.papers.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "No saved papers",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            itemsIndexed(state.papers, key = { _, paper -> paper.id }) { index, paper ->
+                                val containerColor = when (index % 4) {
+                                    0 -> MaterialTheme.colorScheme.tertiaryContainer
+                                    1 -> MaterialTheme.colorScheme.secondaryContainer
+                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                }
+                                val onContainerColor = when (index % 4) {
+                                    0 -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    1 -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+
+                                PaperCard(
+                                    paper = paper,
+                                    onClick = { onPaperClick(paper.id) },
+                                    containerColor = containerColor,
+                                    contentColor = onContainerColor
+                                )
+                            }
+                        }
+                    }
+                }
+                is BookmarkUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+    }
+}
+package org.alphaxiv.app.ui
+
+import app.cash.paparazzi.DeviceConfig
+import app.cash.paparazzi.Paparazzi
+import org.alphaxiv.app.data.model.Paper
+import org.alphaxiv.app.ui.theme.AlphaXivTheme
+import org.alphaxiv.app.ui.screens.feed.PaperCard
+import org.junit.Rule
+import org.junit.Test
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+class ExpressiveUITest {
+    @get:Rule
+    val paparazzi = Paparazzi(
+        deviceConfig = DeviceConfig.PIXEL_5,
+        theme = "android:Theme.Material.Light.NoActionBar"
+    )
+
+    @Test
+    fun snapPaperCard() {
+        val paper = Paper(
+            id = "1",
+            title = "Attention Is All You Need",
+            authors = listOf("Ashish Vaswani", "Noam Shazeer"),
+            summary = "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
+            publishedDate = "12 Jun 2017",
+            thumbnailUrl = null,
+            categories = listOf("cs.CL", "cs.LG"),
+            upvoteCount = 1337,
+            commentCount = 42
+        )
+
+        paparazzi.snapshot {
+            AlphaXivTheme(darkTheme = true, dynamicColor = false) {
+                Box(modifier = Modifier.padding(16.dp)) {
+                    PaperCard(paper = paper, onClick = {})
+                }
+            }
+        }
+    }
+}

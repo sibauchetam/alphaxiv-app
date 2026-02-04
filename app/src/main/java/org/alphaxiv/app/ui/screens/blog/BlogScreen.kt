@@ -7,13 +7,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.alphaxiv.app.ui.components.LatexMarkdownText
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BlogScreen(
     id: String,
@@ -27,6 +30,7 @@ fun BlogScreen(
     val uiState by viewModel.uiState.collectAsState()
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     var showLanguageMenu by remember { mutableStateOf(false) }
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val languages = listOf(
         "en" to "English",
@@ -41,9 +45,11 @@ fun BlogScreen(
     )
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Blog") },
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -73,15 +79,17 @@ fun BlogScreen(
                             )
                         }
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             )
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             when (val state = uiState) {
                 is BlogUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularWavyProgressIndicator()
                     }
                 }
                 is BlogUiState.Success -> {
@@ -89,12 +97,21 @@ fun BlogScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
+                            .padding(24.dp)
                     ) {
-                        LatexMarkdownText(
-                            markdown = state.content,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceBright,
+                            shape = MaterialTheme.shapes.extraLarge,
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(modifier = Modifier.padding(24.dp)) {
+                                LatexMarkdownText(
+                                    markdown = state.content,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
                 is BlogUiState.Error -> {

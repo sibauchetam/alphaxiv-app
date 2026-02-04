@@ -1,14 +1,14 @@
 package org.alphaxiv.app.ui
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -20,88 +20,32 @@ import org.alphaxiv.app.ui.screens.blog.BlogScreen
 import org.alphaxiv.app.ui.screens.bookmarks.BookmarksScreen
 import org.alphaxiv.app.ui.screens.details.DetailScreen
 import org.alphaxiv.app.ui.screens.feed.FeedScreen
-import org.alphaxiv.app.ui.screens.search.SearchScreen
 
-sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    data object Feed : Screen("feed", "Explore", Icons.Default.Explore)
-    data object Search : Screen("search", "Search", Icons.Default.Search)
-    data object Bookmarks : Screen("bookmarks", "Bookmarks", Icons.Default.Bookmark)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    Scaffold(
-        topBar = {
-            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
-                val title = when (currentRoute) {
-                    Screen.Feed.route -> "Explore"
-                    Screen.Search.route -> "Search"
-                    Screen.Bookmarks.route -> "Bookmarks"
-                    else -> "alphaXiv"
-                }
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-        },
-        bottomBar = {
-            if (currentRoute in listOf(Screen.Feed.route, Screen.Search.route, Screen.Bookmarks.route)) {
-                NavigationBar {
-                    val items = listOf(Screen.Feed, Screen.Search, Screen.Bookmarks)
-                    items.forEach { screen ->
-                        NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = screen.label) },
-                            label = { Text(screen.label) },
-                            selected = currentRoute == screen.route,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Feed.route,
-            modifier = Modifier.padding(innerPadding)
+            startDestination = "feed",
+            modifier = Modifier.fillMaxSize()
         ) {
-            composable(Screen.Feed.route) {
+            composable("feed") {
                 FeedScreen(
                     viewModel = hiltViewModel(),
-                    onPaperClick = { id -> navController.navigate("details/$id") }
+                    onPaperClick = { id -> navController.navigate("details/$id") },
+                    onMenuClick = { /* Open Drawer or Menu */ },
+                    onBookmarksClick = { navController.navigate("bookmarks") }
                 )
             }
-            composable(Screen.Search.route) {
-                SearchScreen(
-                    viewModel = hiltViewModel(),
-                    onPaperClick = { id -> navController.navigate("details/$id") }
-                )
-            }
-            composable(Screen.Bookmarks.route) {
+            composable("bookmarks") {
                 BookmarksScreen(
                     viewModel = hiltViewModel(),
-                    onPaperClick = { id -> navController.navigate("details/$id") }
+                    onPaperClick = { id -> navController.navigate("details/$id") },
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(

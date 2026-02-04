@@ -7,7 +7,7 @@
     </style>
 
     <style name="Theme.AlphaXiv.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#FBF8F7</item>
+        <item name="windowSplashScreenBackground">#1A1110</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="postSplashScreenTheme">@style/Theme.AlphaXiv</item>
     </style>
